@@ -50,7 +50,12 @@ class GroupManagementScreen extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (state.activeGroupId != null && state.isSynced) ...[
+                        _MeSection(state: state, isDark: isDark, cs: cs),
+                        const SizedBox(height: 24),
+                      ],
                       Row(
                         children: [
                           Expanded(
@@ -409,4 +414,57 @@ class _StyledTextField extends StatelessWidget {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
           filled: true,
           fillColor: Colors.grey.withValues(alpha: 0.1)));
+}
+class _MeSection extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final ColorScheme cs;
+  const _MeSection({required this.state, required this.isDark, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.people.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Me (This device)',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, fontFamily: 'Outfit')),
+      const SizedBox(height: 12),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: state.people.map((p) {
+            final isMe = p.fcmToken != null; // Simple check for prototype
+            return GestureDetector(
+              onTap: () => _confirmClaim(context, p),
+              child: Container(
+                margin: const EdgeInsets.only(right: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: isMe ? cs.primary : (isDark ? Colors.white10 : Colors.white),
+                    border: Border.all(color: isMe ? cs.primary : Colors.transparent)),
+                child: Text(p.name,
+                    style: TextStyle(
+                        color: isMe ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13)),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text('Select your profile to receive reminders.',
+          style: TextStyle(fontSize: 11, color: isDark ? Colors.white24 : Colors.black26))
+    ]);
+  }
+
+  void _confirmClaim(BuildContext context, Person person) {
+    UIHelpers.showLiquidDialog(
+        context: context,
+        title: 'Claim Profile',
+        content: Text('Are you ${person.name}? This will associate your device for notifications.'),
+        confirmLabel: 'Yes, that\'s me',
+        onConfirm: () => state.claimPerson(person.id));
+  }
 }

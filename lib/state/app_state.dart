@@ -6,12 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import '../models.dart';
 import '../logic/debt_engine.dart';
 import '../services/sync_service.dart';
+import '../services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
   final List<Group> _groups = [];
   String? _activeGroupId;
   bool _isLoading = true;
   Group? _cachedActiveGroup;
+  String? _fcmToken;
 
   StreamSubscription<DocumentSnapshot>? _syncSubscription;
   final SyncService _syncService = SyncService();
@@ -79,6 +81,7 @@ class AppState extends ChangeNotifier {
 
       if (_activeGroupId != null) {
         _setupSync();
+        _setupNotifications();
       }
     } catch (e) {
       debugPrint("Error loading state: $e");
@@ -101,6 +104,26 @@ class AppState extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Firebase: Error saving state: $e");
+    }
+  }
+
+  Future<void> _setupNotifications() async {
+    final ns = NotificationService();
+    final group = _activeGroup;
+    if (group?.syncId != null) {
+      // Unsubscribe from all previous group topics if needed, 
+      // or just ensure current one is active.
+      await ns.subscribeToGroup(group!.syncId!);
+    }
+    
+    _fcmToken = await ns.getToken();
+    // Auto-update fcmToken for the claimed person if they exist
+    if (_fcmToken != null && _activeGroupId != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final claimedId = prefs.getString('claimedPersonId_${_activeGroupId}');
+      if (claimedId != null) {
+        await claimPerson(claimedId);
+      }
     }
   }
 
@@ -136,6 +159,7 @@ class AppState extends ChangeNotifier {
       _cachedActiveGroup = updated;
       await _saveState();
       _setupSync();
+      _setupNotifications();
       notifyListeners();
     }
   }
@@ -149,7 +173,31 @@ class AppState extends ChangeNotifier {
       _cachedActiveGroup = remoteGroup;
       await _saveState();
       _setupSync();
+      _setupNotifications();
       notifyListeners();
+    }
+  }
+
+  Future<void> claimPerson(String personId) async {
+    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
+    if (gIdx != -1) {
+      final pIdx = _groups[gIdx].people.indexWhere((p) => p.id == personId);
+      if (pIdx != -1) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('claimedPersonId_${_activeGroupId}', personId);
+        
+        final ns = NotificationService();
+        _fcmToken = await ns.getToken();
+        
+        if (_fcmToken != null) {
+          final updatedPeople = [..._groups[gIdx].people];
+          updatedPeople[pIdx] = updatedPeople[pIdx].copyWith(fcmToken: _fcmToken);
+          _groups[gIdx] = _groups[gIdx].copyWith(people: updatedPeople);
+          _cachedActiveGroup = _groups[gIdx];
+          await _saveState();
+        }
+        notifyListeners();
+      }
     }
   }
 
@@ -162,6 +210,7 @@ class AppState extends ChangeNotifier {
     _cachedActiveGroup = newGroup;
     _saveState();
     _setupSync();
+    _setupNotifications();
     notifyListeners();
   }
 
@@ -171,6 +220,7 @@ class AppState extends ChangeNotifier {
       _cachedActiveGroup = null;
       _saveState();
       _setupSync();
+      _setupNotifications();
       notifyListeners();
     }
   }
@@ -201,6 +251,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _updateActiveGroup(Group Function(Group) updater) {
+    final idx = _groups.indexWhere((g) => g.id == _activeGroupId);
+    if (idx != -1) {
+      final updated = updater(_groups[idx]);
+      _groups[idx] = updated;
+      _cachedActiveGroup = updated;
+      _saveState();
+      notifyListeners();
+    }
+  }
+
   void setGroupName(String id, String name) {
     final idx = _groups.indexWhere((g) => g.id == id);
     if (idx != -1) {
@@ -212,117 +273,84 @@ class AppState extends ChangeNotifier {
   }
 
   // Member Management
-  Future<void> addPerson(String name, {int? colorIndex, String? avatarUrl}) async {
+  Future<void> addPerson(String name,
+      {int? colorIndex, String? avatarUrl}) async {
     if (name.trim().isEmpty || _activeGroupId == null) return;
-    
-    final idx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (idx != -1) {
-      final person = Person(name: name, colorIndex: colorIndex, avatarUrl: avatarUrl ?? '');
-      final updatedPeople = [..._groups[idx].people, person];
-      _groups[idx] = _groups[idx].copyWith(people: updatedPeople);
-      _cachedActiveGroup = _groups[idx];
-      _saveState();
-      notifyListeners();
 
-      if (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
-        final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
-        if (cloudUrl != null && cloudUrl != avatarUrl) {
-          updatePerson(person.id, avatarUrl: cloudUrl);
-        }
+    final person =
+        Person(name: name, colorIndex: colorIndex, avatarUrl: avatarUrl ?? '');
+    _updateActiveGroup((g) {
+      final updatedPeople = [...g.people, person];
+      return g.copyWith(people: updatedPeople);
+    });
+
+    if (avatarUrl != null &&
+        avatarUrl.isNotEmpty &&
+        !avatarUrl.startsWith('http')) {
+      final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
+      if (cloudUrl != null && cloudUrl != avatarUrl) {
+        updatePerson(person.id, avatarUrl: cloudUrl);
       }
     }
   }
 
-  Future<void> updatePerson(String id, {String? name, int? colorIndex, String? avatarUrl}) async {
-    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (gIdx != -1) {
-      final pIdx = _groups[gIdx].people.indexWhere((p) => p.id == id);
-      if (pIdx != -1) {
-        final updatedPeople = [..._groups[gIdx].people];
-        updatedPeople[pIdx] = updatedPeople[pIdx].copyWith(name: name, colorIndex: colorIndex, avatarUrl: avatarUrl);
-        _groups[gIdx] = _groups[gIdx].copyWith(people: updatedPeople);
-        _cachedActiveGroup = _groups[gIdx];
-        _saveState();
-        notifyListeners();
+  Future<void> updatePerson(String id,
+      {String? name, int? colorIndex, String? avatarUrl}) async {
+    _updateActiveGroup((g) {
+      final pIdx = g.people.indexWhere((p) => p.id == id);
+      if (pIdx == -1) return g;
+      final updatedPeople = [...g.people];
+      updatedPeople[pIdx] = updatedPeople[pIdx]
+          .copyWith(name: name, colorIndex: colorIndex, avatarUrl: avatarUrl);
+      return g.copyWith(people: updatedPeople);
+    });
 
-        if (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
-          final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
-          if (cloudUrl != null && cloudUrl != avatarUrl) {
-            updatePerson(id, avatarUrl: cloudUrl);
-          }
-        }
+    if (avatarUrl != null &&
+        avatarUrl.isNotEmpty &&
+        !avatarUrl.startsWith('http')) {
+      final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
+      if (cloudUrl != null && cloudUrl != avatarUrl) {
+        updatePerson(id, avatarUrl: cloudUrl);
       }
     }
   }
 
   void removePerson(String id) {
-    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (gIdx != -1) {
-      final updatedPeople = _groups[gIdx].people.where((p) => p.id != id).toList();
-      final updatedTxs = _groups[gIdx].transactions.where((t) => t.payerId != id && !t.participantIds.contains(id)).toList();
-      _groups[gIdx] = _groups[gIdx].copyWith(people: updatedPeople, transactions: updatedTxs);
-      _cachedActiveGroup = _groups[gIdx];
-      _saveState();
-      notifyListeners();
-    }
+    _updateActiveGroup((g) {
+      final updatedPeople = g.people.where((p) => p.id != id).toList();
+      final updatedTxs = g.transactions
+          .where((t) => t.payerId != id && !t.participantIds.contains(id))
+          .toList();
+      return g.copyWith(people: updatedPeople, transactions: updatedTxs);
+    });
   }
 
   // Transaction Management
   void addTransaction(Transaction tx) {
-    final idx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (idx != -1) {
-      final updatedTxs = [..._groups[idx].transactions, tx];
-      _groups[idx] = _groups[idx].copyWith(transactions: updatedTxs);
-      _cachedActiveGroup = _groups[idx];
-      _saveState();
-      notifyListeners();
-    }
+    _updateActiveGroup((g) => g.copyWith(transactions: [...g.transactions, tx]));
   }
 
   void editTransaction(String id, Transaction newTx) {
-    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (gIdx != -1) {
-      final tIdx = _groups[gIdx].transactions.indexWhere((t) => t.id == id);
-      if (tIdx != -1) {
-        final updatedTxs = [..._groups[gIdx].transactions];
-        updatedTxs[tIdx] = newTx;
-        _groups[gIdx] = _groups[gIdx].copyWith(transactions: updatedTxs);
-        _cachedActiveGroup = _groups[gIdx];
-        _saveState();
-        notifyListeners();
-      }
-    }
+    _updateActiveGroup((g) {
+      final tIdx = g.transactions.indexWhere((t) => t.id == id);
+      if (tIdx == -1) return g;
+      final updatedTxs = [...g.transactions];
+      updatedTxs[tIdx] = newTx;
+      return g.copyWith(transactions: updatedTxs);
+    });
   }
 
   void removeTransaction(String id) {
-    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (gIdx != -1) {
-      final updatedTxs = _groups[gIdx].transactions.where((t) => t.id != id).toList();
-      _groups[gIdx] = _groups[gIdx].copyWith(transactions: updatedTxs);
-      _cachedActiveGroup = _groups[gIdx];
-      _saveState();
-      notifyListeners();
-    }
+    _updateActiveGroup((g) =>
+        g.copyWith(transactions: g.transactions.where((t) => t.id != id).toList()));
   }
 
   void clearAll() {
-    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (gIdx != -1) {
-      _groups[gIdx] = _groups[gIdx].copyWith(people: [], transactions: []);
-      _cachedActiveGroup = _groups[gIdx];
-      _saveState();
-      notifyListeners();
-    }
+    _updateActiveGroup((g) => g.copyWith(people: [], transactions: []));
   }
 
   void clearExpenses() {
-    final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
-    if (gIdx != -1) {
-      _groups[gIdx] = _groups[gIdx].copyWith(transactions: []);
-      _cachedActiveGroup = _groups[gIdx];
-      _saveState();
-      notifyListeners();
-    }
+    _updateActiveGroup((g) => g.copyWith(transactions: []));
   }
 
   // Calculations
@@ -416,6 +444,15 @@ class AppState extends ChangeNotifier {
     if (shouldClear) clearExpenses();
     addTransaction(tx);
     if (settlements.isEmpty) clearExpenses();
+  }
+
+  Future<void> remindPerson(String personId, double amount) async {
+    final person = people.firstWhere((p) => p.id == personId);
+    if (person.fcmToken == null) return;
+    
+    debugPrint('Firebase: Simulating sending reminder to ${person.name} (${person.fcmToken}) for ${amount}');
+    // Ideally this would call a Cloud Function or FCM API directly if Server Key is used.
+    // For now, we simulate the action and prompt users to finish server setup.
   }
 
   @override

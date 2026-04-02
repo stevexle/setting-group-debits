@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 
 import 'state/app_state.dart';
 import 'ui/dashboard_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await NotificationService().init();
   } catch (e) {
     debugPrint("Firebase initialization failed: $e");
   }

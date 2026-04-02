@@ -467,35 +467,68 @@ class _SettlementCard extends StatelessWidget {
                         isDark: isDark),
                   ],
                 ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.check_circle_rounded, size: 18),
-                    label: Text(s.settleNow.toUpperCase(),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                            fontSize: 13,
-                            fontFamily: 'Outfit')),
-                    onPressed: onSettle,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? const Color(0xFF7B61FF).withValues(alpha: 0.2)
-                          : const Color(0xFF7B61FF),
-                      foregroundColor:
-                          isDark ? const Color(0xFF7B61FF) : Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                            color: isDark
-                                ? const Color(0xFF7B61FF).withValues(alpha: 0.5)
-                                : Colors.transparent),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.check_circle_rounded, size: 18),
+                          label: Text(s.settleNow.toUpperCase(),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  fontSize: 12,
+                                  fontFamily: 'Outfit')),
+                          onPressed: onSettle,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? const Color(0xFF7B61FF).withValues(alpha: 0.2)
+                                : const Color(0xFF7B61FF),
+                            foregroundColor:
+                                isDark ? const Color(0xFF7B61FF) : Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                  color: isDark
+                                      ? const Color(0xFF7B61FF).withValues(alpha: 0.5)
+                                      : Colors.transparent),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 1,
+                      child: SizedBox(
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            context.read<AppState>().remindPerson(from.id, amount);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Reminder sent to ${from.name}!'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            side: BorderSide(
+                                color: isDark ? Colors.white10 : Colors.black12),
+                          ),
+                          child: Icon(Icons.notifications_active_rounded,
+                              size: 18,
+                              color: isDark ? Colors.white70 : Colors.black54),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

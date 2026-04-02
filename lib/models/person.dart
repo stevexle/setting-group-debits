@@ -5,12 +5,14 @@ class Person {
   final String name;
   final String avatarUrl;
   final int colorIndex;
+  final String? fcmToken;
 
   Person({
     String? id,
     required this.name,
     this.avatarUrl = '',
     int? colorIndex,
+    this.fcmToken,
   })  : id = id ?? const Uuid().v4(),
         colorIndex = colorIndex ?? (DateTime.now().millisecondsSinceEpoch % 8);
 
@@ -19,6 +21,7 @@ class Person {
         'name': name,
         'avatarUrl': avatarUrl,
         'colorIndex': colorIndex,
+        'fcmToken': fcmToken,
       };
 
   factory Person.fromJson(Map<String, dynamic> json) => Person(
@@ -26,13 +29,20 @@ class Person {
         name: json['name'],
         avatarUrl: json['avatarUrl'] ?? '',
         colorIndex: json['colorIndex'] ?? 0,
+        fcmToken: json['fcmToken'],
       );
 
-  Person copyWith({String? name, String? avatarUrl, int? colorIndex}) => Person(
+  Person copyWith(
+          {String? name,
+          String? avatarUrl,
+          int? colorIndex,
+          String? fcmToken}) =>
+      Person(
         id: id,
         name: name ?? this.name,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         colorIndex: colorIndex ?? this.colorIndex,
+        fcmToken: fcmToken ?? this.fcmToken,
       );
 
   @override

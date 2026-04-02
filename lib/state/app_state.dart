@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import '../models.dart';
 import '../logic/debt_engine.dart';
+import '../services/sync_service.dart';
 
 class AppState extends ChangeNotifier {
   final List<Group> _groups = [];
@@ -10,10 +13,29 @@ class AppState extends ChangeNotifier {
   bool _isLoading = true;
   Group? _cachedActiveGroup;
 
+  StreamSubscription<DocumentSnapshot>? _syncSubscription;
+  final SyncService _syncService = SyncService();
+
+  // Optimized Cache
+  List<Settlement>? _cachedSettlements;
+  Map<String, double>? _cachedNetBalances;
+
   AppState() {
     _loadState();
   }
 
+  void _clearCache() {
+    _cachedSettlements = null;
+    _cachedNetBalances = null;
+  }
+
+  @override
+  void notifyListeners() {
+    _clearCache();
+    super.notifyListeners();
+  }
+
+  // Getters
   bool get isLoading => _isLoading;
   List<Group> get groups => List.unmodifiable(_groups);
   String? get activeGroupId => _activeGroupId;
@@ -24,8 +46,10 @@ class AppState extends ChangeNotifier {
     try {
       _cachedActiveGroup = _groups.firstWhere((g) => g.id == _activeGroupId);
     } catch (_) {
-      _cachedActiveGroup = _groups.first;
-      _activeGroupId = _cachedActiveGroup?.id;
+      if (_groups.isNotEmpty) {
+        _cachedActiveGroup = _groups.first;
+        _activeGroupId = _cachedActiveGroup?.id;
+      }
     }
     return _cachedActiveGroup;
   }
@@ -33,7 +57,10 @@ class AppState extends ChangeNotifier {
   String get groupName => _activeGroup?.name ?? 'No Group';
   List<Person> get people => _activeGroup?.people ?? const [];
   List<Transaction> get transactions => _activeGroup?.transactions ?? const [];
+  bool get isSynced => _activeGroup?.syncId != null;
+  String? get syncCode => _activeGroup?.syncId;
 
+  // Persistence
   Future<void> _loadState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -41,21 +68,18 @@ class AppState extends ChangeNotifier {
       if (groupsJson != null) {
         final List decode = jsonDecode(groupsJson);
         _groups.clear();
-        _groups.addAll(decode.map((g) => Group.fromJson(g)));
+        _groups.addAll(decode.map((g) => Group.fromJson(Map<String, dynamic>.from(g))));
       } else {
-        final pJson = prefs.getString('people');
-        final tJson = prefs.getString('transactions');
         final gName = prefs.getString('groupName') ?? 'My First Group';
-        List<Person> pList = [];
-        List<Transaction> tList = [];
-        if (pJson != null) pList = (jsonDecode(pJson) as List).map((p) => Person.fromJson(p)).toList();
-        if (tJson != null) tList = (jsonDecode(tJson) as List).map((t) => Transaction.fromJson(t)).toList();
-        final defaultGroup = Group(name: gName, people: pList, transactions: tList);
+        final defaultGroup = Group(name: gName);
         _groups.add(defaultGroup);
         _activeGroupId = defaultGroup.id;
-        _saveState();
       }
       _activeGroupId ??= prefs.getString('activeGroupId') ?? (_groups.isNotEmpty ? _groups.first.id : null);
+
+      if (_activeGroupId != null) {
+        _setupSync();
+      }
     } catch (e) {
       debugPrint("Error loading state: $e");
     } finally {
@@ -70,17 +94,74 @@ class AppState extends ChangeNotifier {
       final groupsJson = jsonEncode(_groups.map((g) => g.toJson()).toList());
       await prefs.setString('groups_v2', groupsJson);
       if (_activeGroupId != null) await prefs.setString('activeGroupId', _activeGroupId!);
+
+      final group = _activeGroup;
+      if (group?.syncId != null) {
+        await _syncService.pushUpdate(group!);
+      }
     } catch (e) {
-      debugPrint("Error saving state: $e");
+      debugPrint("Firebase: Error saving state: $e");
     }
   }
 
+  // Sync logic
+  void _setupSync() {
+    _syncSubscription?.cancel();
+    final group = _activeGroup;
+    if (group?.syncId != null) {
+      _syncSubscription = _syncService.getSyncStream(group!.syncId!)
+          .listen((doc) {
+        if (doc.exists) {
+          final remoteGroup = Group.fromJson(Map<String, dynamic>.from(doc.data() as Map<String, dynamic>));
+          final idx = _groups.indexWhere((g) => g.id == group.id);
+          if (idx != -1) {
+            _groups[idx] = remoteGroup;
+            _cachedActiveGroup = remoteGroup;
+            notifyListeners();
+          }
+        }
+      }, onError: (e) => debugPrint("Firebase: Sync error: $e"));
+    }
+  }
+
+  Future<void> enableSync() async {
+    final group = _activeGroup;
+    if (group == null || group.syncId != null) return;
+
+    final syncId = await _syncService.enableSync(group);
+    if (syncId != null) {
+      final updated = group.copyWith(syncId: syncId);
+      final idx = _groups.indexWhere((g) => g.id == group.id);
+      _groups[idx] = updated;
+      _cachedActiveGroup = updated;
+      await _saveState();
+      _setupSync();
+      notifyListeners();
+    }
+  }
+
+  Future<void> joinSyncGroup(String inviteCode) async {
+    final remoteGroup = await _syncService.fetchGroup(inviteCode);
+    if (remoteGroup != null) {
+      _groups.removeWhere((g) => g.syncId == inviteCode);
+      _groups.add(remoteGroup);
+      _activeGroupId = remoteGroup.id;
+      _cachedActiveGroup = remoteGroup;
+      await _saveState();
+      _setupSync();
+      notifyListeners();
+    }
+  }
+
+  // Group Management
   void createGroup(String name) {
+    if (name.isEmpty) return;
     final newGroup = Group(name: name);
     _groups.add(newGroup);
     _activeGroupId = newGroup.id;
     _cachedActiveGroup = newGroup;
     _saveState();
+    _setupSync();
     notifyListeners();
   }
 
@@ -89,6 +170,7 @@ class AppState extends ChangeNotifier {
       _activeGroupId = id;
       _cachedActiveGroup = null;
       _saveState();
+      _setupSync();
       notifyListeners();
     }
   }
@@ -96,20 +178,14 @@ class AppState extends ChangeNotifier {
   bool isGroupBalanced(String groupId) {
     final group = _groups.firstWhere((g) => g.id == groupId, orElse: () => _groups.first);
     if (group.people.isEmpty) return true;
+    
+    if (group.id == _activeGroupId) {
+       final balances = _getNetBalances();
+       return balances.values.every((v) => v.abs() < 0.01);
+    }
+
     for (final person in group.people) {
-      final pid = person.id;
-      double net = 0;
-      for (final tx in group.transactions) {
-        if (tx.payerId == pid) net += tx.amount;
-        if (tx.participantIds.contains(pid)) {
-          if (tx.customAmounts != null) {
-            net -= (tx.customAmounts![pid] ?? 0);
-          } else {
-            net -= (tx.amount / tx.participantIds.length);
-          }
-        }
-      }
-      if (net.abs() > 0.01) return false;
+      if (getPersonNetBalance(person.id, inGroup: group).abs() > 0.01) return false;
     }
     return true;
   }
@@ -135,19 +211,29 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void addPerson(String name, {int? colorIndex, String? avatarUrl}) {
+  // Member Management
+  Future<void> addPerson(String name, {int? colorIndex, String? avatarUrl}) async {
     if (name.trim().isEmpty || _activeGroupId == null) return;
+    
     final idx = _groups.indexWhere((g) => g.id == _activeGroupId);
     if (idx != -1) {
-      final updatedPeople = [..._groups[idx].people, Person(name: name, colorIndex: colorIndex, avatarUrl: avatarUrl ?? '')];
+      final person = Person(name: name, colorIndex: colorIndex, avatarUrl: avatarUrl ?? '');
+      final updatedPeople = [..._groups[idx].people, person];
       _groups[idx] = _groups[idx].copyWith(people: updatedPeople);
       _cachedActiveGroup = _groups[idx];
       _saveState();
       notifyListeners();
+
+      if (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
+        final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
+        if (cloudUrl != null && cloudUrl != avatarUrl) {
+          updatePerson(person.id, avatarUrl: cloudUrl);
+        }
+      }
     }
   }
 
-  void updatePerson(String id, {String? name, int? colorIndex, String? avatarUrl}) {
+  Future<void> updatePerson(String id, {String? name, int? colorIndex, String? avatarUrl}) async {
     final gIdx = _groups.indexWhere((g) => g.id == _activeGroupId);
     if (gIdx != -1) {
       final pIdx = _groups[gIdx].people.indexWhere((p) => p.id == id);
@@ -158,6 +244,13 @@ class AppState extends ChangeNotifier {
         _cachedActiveGroup = _groups[gIdx];
         _saveState();
         notifyListeners();
+
+        if (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
+          final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
+          if (cloudUrl != null && cloudUrl != avatarUrl) {
+            updatePerson(id, avatarUrl: cloudUrl);
+          }
+        }
       }
     }
   }
@@ -174,6 +267,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // Transaction Management
   void addTransaction(Transaction tx) {
     final idx = _groups.indexWhere((g) => g.id == _activeGroupId);
     if (idx != -1) {
@@ -231,29 +325,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // Calculations
   double get weeklyTotal {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-    double sum = 0;
-    for (final t in transactions) { if (!t.isPayment && t.date.isAfter(weekAgo)) sum += t.amount; }
-    return sum;
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    return transactions
+        .where((t) => !t.isPayment && t.date.isAfter(weekAgo))
+        .fold(0, (sum, t) => sum + t.amount);
   }
 
   double get monthlyTotal {
     final now = DateTime.now();
-    double sum = 0;
-    for (final t in transactions) { if (!t.isPayment && t.date.month == now.month && t.date.year == now.year) sum += t.amount; }
-    return sum;
+    return transactions
+        .where((t) => !t.isPayment && t.date.month == now.month && t.date.year == now.year)
+        .fold(0, (sum, t) => sum + t.amount);
   }
 
   bool get hasSettlements => transactions.any((t) => t.isPayment || t.description.startsWith('Settle:'));
-  List<Settlement> get settlements => DebtEngine.settleDebts(people, transactions);
+  List<Settlement> get settlements => _cachedSettlements ??= DebtEngine.settleDebts(people, transactions);
 
-  double getPersonSpent(String personId) {
-    double sum = 0;
-    for (final tx in transactions) { if (tx.payerId == personId) sum += tx.amount; }
-    return sum;
-  }
+  double getPersonSpent(String personId) =>
+      transactions.where((tx) => tx.payerId == personId).fold(0, (sum, tx) => sum + tx.amount);
 
   double getPersonShare(String personId) {
     double sum = 0;
@@ -269,9 +360,31 @@ class AppState extends ChangeNotifier {
     return sum;
   }
 
-  double getPersonNetBalance(String personId) {
-    double net = 0;
+  Map<String, double> _getNetBalances() {
+    if (_cachedNetBalances != null) return _cachedNetBalances!;
+    final map = <String, double>{for (var p in people) p.id: 0.0};
     for (final tx in transactions) {
+      map[tx.payerId] = (map[tx.payerId] ?? 0) + tx.amount;
+      if (tx.customAmounts != null) {
+        for (final pid in tx.participantIds) {
+          map[pid] = (map[pid] ?? 0) - (tx.customAmounts![pid] ?? 0);
+        }
+      } else if (tx.participantIds.isNotEmpty) {
+        final share = tx.amount / tx.participantIds.length;
+        for (final pid in tx.participantIds) {
+          map[pid] = (map[pid] ?? 0) - share;
+        }
+      }
+    }
+    return _cachedNetBalances = map;
+  }
+
+  double getPersonNetBalance(String personId, {Group? inGroup}) {
+    if (inGroup == null || inGroup.id == _activeGroupId) {
+      return _getNetBalances()[personId] ?? 0.0;
+    }
+    double net = 0;
+    for (final tx in inGroup.transactions) {
       if (tx.payerId == personId) net += tx.amount;
       if (tx.participantIds.contains(personId)) {
         if (tx.customAmounts != null) {
@@ -291,12 +404,23 @@ class AppState extends ChangeNotifier {
   }
 
   void settleDebt(String fromId, String toId, double amount, {bool shouldClear = false}) {
-    if (amount <= 0 || _activeGroupId == null) return;
+    if (amount <= 0) return;
     final pFrom = people.firstWhere((p) => p.id == fromId);
     final pTo = people.firstWhere((p) => p.id == toId);
-    final tx = Transaction(description: "Settle: ${pFrom.name} ➔ ${pTo.name}", amount: amount, payerId: fromId, participantIds: [toId], date: DateTime.now(), isPayment: true);
+    final tx = Transaction(
+        description: "Settle: ${pFrom.name} ➔ ${pTo.name}",
+        amount: amount,
+        payerId: fromId,
+        participantIds: [toId],
+        isPayment: true);
     if (shouldClear) clearExpenses();
     addTransaction(tx);
     if (settlements.isEmpty) clearExpenses();
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
   }
 }

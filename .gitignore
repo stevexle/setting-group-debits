@@ -54,10 +54,19 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Crashlytics/Firebase
+# Firebase / Secrets
 # -----------------------
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+firebase.json
+firestore.rules
+firestore.indexes.json
+storage.rules
+*.env
+*.env.*
+secret.yaml
 ios/Firebase/
-android/app/google-services.json
 
 # Misc
 # -----------------------

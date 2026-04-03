@@ -51,7 +51,7 @@ class AppState extends ChangeNotifier {
     if (group == null) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final localClaimedId = prefs.getString('claimedPersonId_${_activeGroupId}');
+    final localClaimedId = prefs.getString('claimedPersonId_$_activeGroupId');
 
     int personIdx = -1;
     if (localClaimedId != null) {
@@ -325,7 +325,7 @@ class AppState extends ChangeNotifier {
       final pIdx = _groups[gIdx].people.indexWhere((p) => p.id == personId);
       if (pIdx != -1) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('claimedPersonId_${_activeGroupId}', personId);
+        await prefs.setString('claimedPersonId_$_activeGroupId', personId);
         final ns = NotificationService();
         _fcmToken = await ns.getToken();
 
@@ -481,13 +481,24 @@ class AppState extends ChangeNotifier {
     _updateActiveGroup((g) {
       final tIdx = g.transactions.indexWhere((t) => t.id == id);
       if (tIdx == -1) return g;
+      
+      final oldTx = g.transactions[tIdx];
+      final isAmountChanged = oldTx.amount != newTx.amount;
+      
       final updatedTxs = [...g.transactions];
-      updatedTxs[tIdx] = newTx.copyWith(updatedAt: DateTime.now());
+      updatedTxs[tIdx] = newTx.copyWith(
+        updatedAt: isAmountChanged ? DateTime.now() : oldTx.updatedAt,
+        amountChanged: isAmountChanged || oldTx.amountChanged,
+      );
       return g.copyWith(transactions: updatedTxs);
     });
 
     final group = _activeGroup;
-    if (group?.syncId != null) await _syncService.pushTransaction(group!.syncId!, newTx);
+    if (group?.syncId != null) {
+      // Find the updated transaction to push to cloud
+      final updatedTx = transactions.firstWhere((t) => t.id == id);
+      await _syncService.pushTransaction(group!.syncId!, updatedTx);
+    }
     notifyListeners();
   }
 
@@ -510,12 +521,12 @@ class AppState extends ChangeNotifier {
   // Financial Calculations
   double get weeklyTotal {
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    return transactions.where((t) => !t.isPayment && t.date.isAfter(weekAgo)).fold(0, (sum, t) => sum + t.amount);
+    return transactions.where((t) => !t.isPayment && t.date.isAfter(weekAgo)).fold(0, (total, t) => total + t.amount);
   }
 
   double get monthlyTotal {
     final now = DateTime.now();
-    return transactions.where((t) => !t.isPayment && t.date.month == now.month && t.date.year == now.year).fold(0, (sum, t) => sum + t.amount);
+    return transactions.where((t) => !t.isPayment && t.date.month == now.month && t.date.year == now.year).fold(0, (total, t) => total + t.amount);
   }
 
   bool get hasSettlements => transactions.any((t) => t.isPayment || t.description.startsWith('Settle:'));
@@ -572,7 +583,9 @@ class AppState extends ChangeNotifier {
 
   Map<Category, double> get categorySpend {
     final map = <Category, double>{};
-    for (final tx in transactions) map[tx.category] = (map[tx.category] ?? 0) + tx.amount;
+    for (final tx in transactions) {
+      map[tx.category] = (map[tx.category] ?? 0) + tx.amount;
+    }
     return map;
   }
 

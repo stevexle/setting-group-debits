@@ -100,7 +100,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const SettlementScreen())).then((_) => setState(() => _selectedTab = 1)),
+                                    builder: (_) => const SettlementScreen())).then((_) => setState(() => _selectedTab = 0)),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -283,7 +283,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => const AddTransactionModal());
+        builder: (_) => const AddTransactionModal()).then((_) {
+          if (mounted) setState(() => _selectedTab = 0);
+        });
   }
 
   Map<DateTime, List<Transaction>> _groupByDate(List<Transaction> txs, AppStrings s) {

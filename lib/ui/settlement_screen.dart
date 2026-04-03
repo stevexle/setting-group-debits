@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -24,9 +23,13 @@ class SettlementScreen extends StatelessWidget {
 
     for (var i = 0; i < settlements.length; i++) {
       final set = settlements[i];
-      final from = state.people.firstWhere((p) => p.id == set.fromId).name;
-      final to = state.people.firstWhere((p) => p.id == set.toId).name;
-      buffer.writeln('${i + 1}. $from ➔ $to: ${fmt.format(set.amount)}');
+      try {
+        final from = state.people.firstWhere((p) => p.id == set.fromId).name;
+        final to = state.people.firstWhere((p) => p.id == set.toId).name;
+        buffer.writeln('${i + 1}. $from ➔ $to: ${fmt.format(set.amount)}');
+      } catch (e) {
+        continue;
+      }
     }
 
     buffer.writeln('\n${s.appTitle} ✨');
@@ -38,7 +41,8 @@ class SettlementScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final s = AppStrings.of(context);
     final settlements = state.settlements;
-    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+    final currencyFormat = NumberFormat.simpleCurrency(
+        locale: 'vi_VN', name: '₫', decimalDigits: 0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -88,40 +92,52 @@ class SettlementScreen extends StatelessWidget {
                   child: _buildAlgoInfo(s, isDark, settlements.length),
                 ),
               ),
-              LayoutBuilder(
+              SliverLayoutBuilder(
                 builder: (context, constraints) {
-                  final isWide = constraints.maxWidth > 700;
+                  final isWide = constraints.crossAxisExtent > 700;
                   final crossAxisCount = isWide ? 2 : 1;
-                  
+
+                  final validSettlements = settlements.where((set) {
+                    return state.people.any((p) => p.id == set.fromId) &&
+                        state.people.any((p) => p.id == set.toId);
+                  }).toList();
+
                   return SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    sliver: settlements.isEmpty
-                        ? SliverToBoxAdapter(child: _buildAllSettled(context, s, isDark))
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    sliver: validSettlements.isEmpty
+                        ? SliverToBoxAdapter(
+                            child: _buildAllSettled(context, s, isDark))
                         : SliverGrid(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
                               crossAxisSpacing: 16,
-                              mainAxisSpacing: 0,
-                              mainAxisExtent: 220, // Approximate height of _SettlementCard
+                              mainAxisSpacing: 16,
+                              mainAxisExtent: 240,
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (ctx, i) {
-                                final set = settlements[i];
-                                final from = state.people.firstWhere((p) => p.id == set.fromId);
-                                final to = state.people.firstWhere((p) => p.id == set.toId);
+                                final set = validSettlements[i];
+                                final from = state.people
+                                    .firstWhere((p) => p.id == set.fromId);
+                                final to = state.people
+                                    .firstWhere((p) => p.id == set.toId);
                                 return _SettlementCard(
                                   from: from,
                                   to: to,
                                   amount: set.amount,
                                   currencyFormat: currencyFormat,
                                   onSettle: () {
-                                    state.settleDebt(set.fromId, set.toId, set.amount, shouldClear: false);
+                                    state.settleDebt(
+                                        set.fromId, set.toId, set.amount,
+                                        shouldClear: false);
                                   },
                                   s: s,
                                   isDark: isDark,
                                 );
                               },
-                              childCount: settlements.length,
+                              childCount: validSettlements.length,
                             ),
                           ),
                   );
@@ -155,7 +171,8 @@ class SettlementScreen extends StatelessWidget {
                 Text(s.greedyAlgo,
                     style: const TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.bold, color: Color(0xFF7B61FF))),
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF7B61FF))),
                 Text(s.greedySubtitle,
                     style: TextStyle(
                         fontSize: 11,
@@ -166,7 +183,8 @@ class SettlementScreen extends StatelessWidget {
           Text('$count',
               style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.bold, color: Color(0xFF7B61FF))),
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7B61FF))),
         ],
       ),
     );
@@ -210,21 +228,18 @@ class _SettlementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = const Color(0xFF7B61FF);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: GlassContainer(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildAvatarsSection(accentColor),
-            const SizedBox(height: 12),
-            _buildAmountSection(accentColor),
-            const SizedBox(height: 12),
-            _buildActions(context, accentColor),
-          ],
-        ),
+    const accentColor = Color(0xFF7B61FF);
+    return GlassContainer(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildAvatarsSection(accentColor),
+          const SizedBox(height: 12),
+          _buildAmountSection(accentColor),
+          const SizedBox(height: 12),
+          _buildActions(context, accentColor),
+        ],
       ),
     );
   }
@@ -248,8 +263,10 @@ class _SettlementCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                  shape: BoxShape.circle, 
-                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02)),
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.02)),
               child: Icon(Icons.arrow_forward_ios_rounded,
                   size: 11, color: accentColor),
             ),
@@ -299,7 +316,10 @@ class _SettlementCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
             child: Text(s.settleNow,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, fontFamily: 'Outfit')),
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'Outfit')),
           ),
         ),
         const SizedBox(width: 8),
@@ -308,10 +328,13 @@ class _SettlementCard extends StatelessWidget {
             context.read<AppState>().remindPerson(from.id, amount);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(s.remindedUser.replaceAll('{name}', from.name), style: const TextStyle(fontSize: 13)),
+                content: Text(s.remindedUser.replaceAll('{name}', from.name),
+                    style: const TextStyle(fontSize: 13)),
                 behavior: SnackBarBehavior.floating,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             );
           },
@@ -336,7 +359,9 @@ class _ActionSmallButton extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.05),
         ),
         child: IconButton(
           onPressed: onPressed,
@@ -367,8 +392,15 @@ class _Avatar extends StatelessWidget {
                 ? DecorationImage(
                     image: person.avatarUrl.startsWith('http')
                         ? NetworkImage(person.avatarUrl)
-                        : FileImage(File(person.avatarUrl)) as ImageProvider,
-                    fit: BoxFit.cover)
+                        : (File(person.avatarUrl).existsSync()
+                                ? FileImage(File(person.avatarUrl))
+                                : const AssetImage(
+                                    'assets/images/empty_state.png'))
+                            as ImageProvider,
+                    fit: BoxFit.cover,
+                    onError: (exception, stackTrace) =>
+                        debugPrint('Avatar image error'),
+                  )
                 : null,
           ),
           child: person.avatarUrl.isEmpty
@@ -376,16 +408,17 @@ class _Avatar extends StatelessWidget {
                   child: Text(person.name[0].toUpperCase(),
                       style: const TextStyle(
                           fontSize: 16,
-                          color: Colors.white, fontWeight: FontWeight.bold)))
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)))
               : null,
         ),
         const SizedBox(height: 4),
-        Text(person.name, style: TextStyle(
-          fontSize: 11, 
-          fontWeight: FontWeight.w900,
-          color: isDark ? Colors.white70 : Colors.black87,
-          fontFamily: 'Outfit'
-        )),
+        Text(person.name,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white70 : Colors.black87,
+                fontFamily: 'Outfit')),
       ],
     );
   }

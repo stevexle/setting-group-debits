@@ -84,7 +84,7 @@ class TransactionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accentColor = UIHelpers.getCategoryColor(tx.category);
-    final isEdited = tx.updatedAt != null;
+    final isEdited = tx.amountChanged && tx.updatedAt != null;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),

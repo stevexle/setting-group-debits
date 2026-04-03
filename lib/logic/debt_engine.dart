@@ -15,19 +15,25 @@ class DebtEngine {
     for (var tx in transactions) {
       if (tx.participantIds.isEmpty) continue;
 
-      // The payer gets "credited" for what they paid
-      netBalances[tx.payerId] = (netBalances[tx.payerId] ?? 0.0) + tx.amount;
+      // Only include people that still exist in the project
+      if (netBalances.containsKey(tx.payerId)) {
+        netBalances[tx.payerId] = netBalances[tx.payerId]! + tx.amount;
+      }
 
-      // Each participant owes an equal split OR a custom amount
+      // Handle split or custom amounts
       if (tx.customAmounts != null) {
         for (final participantId in tx.participantIds) {
-          final amt = tx.customAmounts![participantId] ?? 0.0;
-          netBalances[participantId] = (netBalances[participantId] ?? 0.0) - amt;
+          if (netBalances.containsKey(participantId)) {
+            final amt = tx.customAmounts![participantId] ?? 0.0;
+            netBalances[participantId] = netBalances[participantId]! - amt;
+          }
         }
       } else {
         final splitAmount = tx.amount / tx.participantIds.length;
         for (final participantId in tx.participantIds) {
-          netBalances[participantId] = (netBalances[participantId] ?? 0.0) - splitAmount;
+          if (netBalances.containsKey(participantId)) {
+            netBalances[participantId] = netBalances[participantId]! - splitAmount;
+          }
         }
       }
     }

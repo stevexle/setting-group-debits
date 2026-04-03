@@ -123,87 +123,120 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     final cs = Theme.of(context).colorScheme;
     final fmt = NumberFormat('#,###', 'en_US');
 
-    return Center(
+    return Align(
+      alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1A1A2E).withValues(alpha: 0.7) : Colors.white.withValues(alpha: 0.8),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                border: Border.all(
-                    color: isDark ? Colors.white.withValues(alpha: 0.1) : cs.primary.withValues(alpha: 0.1),
-                    width: 1.5),
-              ),
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                left: 16,
-                right: 16,
-                top: 12,
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF1E1E2E).withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.75),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.04),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 30,
+                offset: const Offset(0, -10),
+              )
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
               child: Stack(
                 children: [
-                  const LiquidBackground(),
-                  Form(
-                    key: _formKey,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                  color: isDark ? Colors.white24 : Colors.black12,
-                                  borderRadius: BorderRadius.circular(10)),
+                  // Premium Ambient Glow Blobs
+                  Positioned(
+                    top: -100,
+                    right: -100,
+                    child: AmbientGlow(
+                      color: cs.primary,
+                      size: 250,
+                      opacity: 0.12,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -50,
+                    left: -50,
+                    child: AmbientGlow(
+                      color: const Color(0xFF7B61FF),
+                      size: 200,
+                      opacity: 0.1,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      MediaQuery.of(context).viewInsets.bottom + 16,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                    color: isDark ? Colors.white24 : Colors.black12,
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
                             ),
-                          ),
-                          Text(
-                            _isEditing ? s.editExpenseTitle : s.addExpenseTitle,
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                                fontFamily: 'Outfit'),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _descriptionController,
-                            hint: s.descriptionHint,
-                            icon: Icons.edit_rounded,
-                            isDark: isDark,
-                            cs: cs,
-                            height: 70,
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) return s.enterDescription;
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMainAmountField(isDark: isDark, cs: cs, s: s),
-                          const SizedBox(height: 12),
-                          _buildDateTimeButton(isDark: isDark, cs: cs, s: s),
-                          const SizedBox(height: 16),
-                          _headerLabel(s.whoPays, Icons.person_rounded, cs, isDark),
-                          const SizedBox(height: 8),
-                          _buildPayerPicker(state, isDark, cs),
-                          const SizedBox(height: 16),
-                          _headerLabel(s.category, Icons.grid_view_rounded, cs, isDark),
-                          const SizedBox(height: 8),
-                          _buildCategoryPicker(s, isDark, cs),
-                          const SizedBox(height: 20),
-                          _buildSplitSection(s, isDark, cs, state, fmt),
-                          const SizedBox(height: 24),
-                          _buildConfirmButton(cs, s, state),
-                          const SizedBox(height: 8),
-                        ],
+                            Text(
+                              _isEditing ? s.editExpenseTitle : s.addExpenseTitle,
+                              style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                                  fontFamily: 'Outfit'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _descriptionController,
+                              hint: s.descriptionHint,
+                              icon: Icons.edit_rounded,
+                              isDark: isDark,
+                              cs: cs,
+                              height: 70,
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) return s.enterDescription;
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildMainAmountField(isDark: isDark, cs: cs, s: s),
+                            const SizedBox(height: 12),
+                            _buildDateTimeButton(isDark: isDark, cs: cs, s: s),
+                            const SizedBox(height: 16),
+                            _headerLabel(s.whoPays, Icons.person_rounded, cs, isDark),
+                            const SizedBox(height: 8),
+                            _buildPayerPicker(state, isDark, cs),
+                            const SizedBox(height: 16),
+                            _headerLabel(s.category, Icons.grid_view_rounded, cs, isDark),
+                            const SizedBox(height: 8),
+                            _buildCategoryPicker(s, isDark, cs),
+                            const SizedBox(height: 20),
+                            _buildSplitSection(s, isDark, cs, state, fmt),
+                            const SizedBox(height: 24),
+                            _buildConfirmButton(cs, s, state),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -673,7 +706,6 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         category: _category,
         isPayment: widget.initialTransaction?.isPayment ?? false,
         customAmounts: customAmounts,
-        updatedAt: _isEditing ? DateTime.now() : null,
       );
 
       if (_isEditing) {

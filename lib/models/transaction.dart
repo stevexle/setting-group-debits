@@ -19,6 +19,7 @@ class Transaction {
   final List<String> participantIds;
   final DateTime date;
   final DateTime? updatedAt;
+  final bool amountChanged;
   final Category category;
   final bool isPayment;
   final Map<String, double>? customAmounts; // null = split equally
@@ -31,6 +32,7 @@ class Transaction {
     required this.participantIds,
     DateTime? date,
     this.updatedAt,
+    this.amountChanged = false,
     this.category = Category.other,
     this.isPayment = false,
     this.customAmounts,
@@ -45,6 +47,7 @@ class Transaction {
         'participantIds': participantIds,
         'date': date.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),
+        'amountChanged': amountChanged,
         'category': category.name,
         'isPayment': isPayment,
         'customAmounts': customAmounts,
@@ -60,6 +63,7 @@ class Transaction {
         updatedAt: json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'])
             : null,
+        amountChanged: json['amountChanged'] ?? false,
         category: Category.values.firstWhere(
           (c) => c.name == json['category'],
           orElse: () => Category.other,
@@ -77,6 +81,7 @@ class Transaction {
     String? payerId,
     List<String>? participantIds,
     DateTime? updatedAt,
+    bool? amountChanged,
     Category? category,
     bool? isPayment,
     Map<String, double>? customAmounts,
@@ -89,6 +94,7 @@ class Transaction {
         participantIds: participantIds ?? this.participantIds,
         date: date,
         updatedAt: updatedAt ?? this.updatedAt,
+        amountChanged: amountChanged ?? this.amountChanged,
         category: category ?? this.category,
         isPayment: isPayment ?? this.isPayment,
         customAmounts: customAmounts ?? this.customAmounts,

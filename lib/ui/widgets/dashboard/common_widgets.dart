@@ -102,11 +102,10 @@ class LiquidBackground extends StatelessWidget {
 
     return Stack(
       children: [
-        // Base background image
+        // Base background color
         Positioned.fill(
-          child: Image.asset(
-            'assets/images/background.png',
-            fit: BoxFit.cover,
+          child: Container(
+            color: isDark ? const Color(0xFF0E0E1B) : Colors.white,
           ),
         ),
         // Overlay for depth and readability

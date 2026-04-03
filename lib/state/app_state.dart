@@ -217,7 +217,7 @@ class AppState extends ChangeNotifier {
     _fcmToken = await ns.getToken();
     if (_fcmToken != null && _activeGroupId != null) {
       final prefs = await SharedPreferences.getInstance();
-      final claimedId = prefs.getString('claimedPersonId_${_activeGroupId}');
+      final claimedId = prefs.getString('claimedPersonId_$activeGroupId');
       if (claimedId != null) await claimPerson(claimedId);
     }
   }

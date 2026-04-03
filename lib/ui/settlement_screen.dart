@@ -33,7 +33,7 @@ class SettlementScreen extends StatelessWidget {
     }
 
     buffer.writeln('\n${s.appTitle} ✨');
-    Share.share(buffer.toString());
+    SharePlus.instance.share(ShareParams(text: buffer.toString()));
   }
 
   @override

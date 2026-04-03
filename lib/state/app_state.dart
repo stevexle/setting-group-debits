@@ -335,7 +335,7 @@ class AppState extends ChangeNotifier {
       final tIdx = g.transactions.indexWhere((t) => t.id == id);
       if (tIdx == -1) return g;
       final updatedTxs = [...g.transactions];
-      updatedTxs[tIdx] = newTx;
+      updatedTxs[tIdx] = newTx.copyWith(updatedAt: DateTime.now());
       return g.copyWith(transactions: updatedTxs);
     });
   }

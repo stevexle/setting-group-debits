@@ -18,6 +18,7 @@ class Transaction {
   final String payerId;
   final List<String> participantIds;
   final DateTime date;
+  final DateTime? updatedAt;
   final Category category;
   final bool isPayment;
   final Map<String, double>? customAmounts; // null = split equally
@@ -29,6 +30,7 @@ class Transaction {
     required this.payerId,
     required this.participantIds,
     DateTime? date,
+    this.updatedAt,
     this.category = Category.other,
     this.isPayment = false,
     this.customAmounts,
@@ -42,6 +44,7 @@ class Transaction {
         'payerId': payerId,
         'participantIds': participantIds,
         'date': date.toIso8601String(),
+        'updatedAt': updatedAt?.toIso8601String(),
         'category': category.name,
         'isPayment': isPayment,
         'customAmounts': customAmounts,
@@ -54,6 +57,9 @@ class Transaction {
         payerId: json['payerId'],
         participantIds: List<String>.from(json['participantIds']),
         date: DateTime.parse(json['date']),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'])
+            : null,
         category: Category.values.firstWhere(
           (c) => c.name == json['category'],
           orElse: () => Category.other,
@@ -63,6 +69,29 @@ class Transaction {
             ? Map<String, double>.from(json['customAmounts']
                 .map((k, v) => MapEntry(k, v.toDouble())))
             : null,
+      );
+
+  Transaction copyWith({
+    String? description,
+    double? amount,
+    String? payerId,
+    List<String>? participantIds,
+    DateTime? updatedAt,
+    Category? category,
+    bool? isPayment,
+    Map<String, double>? customAmounts,
+  }) =>
+      Transaction(
+        id: id,
+        description: description ?? this.description,
+        amount: amount ?? this.amount,
+        payerId: payerId ?? this.payerId,
+        participantIds: participantIds ?? this.participantIds,
+        date: date,
+        updatedAt: updatedAt ?? this.updatedAt,
+        category: category ?? this.category,
+        isPayment: isPayment ?? this.isPayment,
+        customAmounts: customAmounts ?? this.customAmounts,
       );
 }
 

@@ -902,11 +902,28 @@ class TransactionCard extends StatelessWidget {
                                          color: cs.primary)),
                                ),
                             ],
+                            if (tx.updatedAt != null) ...[
+                               const SizedBox(width: 6),
+                               Container(
+                                 padding: const EdgeInsets.symmetric(
+                                     horizontal: 5, vertical: 1),
+                                 decoration: BoxDecoration(
+                                     borderRadius: BorderRadius.circular(4),
+                                     color: Colors.blue.withValues(alpha: 0.1),
+                                     border: Border.all(
+                                         color: Colors.blue.withValues(alpha: 0.25))),
+                                 child: const Text('CHỈNH SỬA',
+                                     style: TextStyle(
+                                         fontSize: 7,
+                                         fontWeight: FontWeight.w900,
+                                         color: Colors.blue)),
+                               ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                            '${DateFormat('HH:mm').format(tx.date)} • ${tx.isPayment ? s.tabBill : '${s.paidBy} ${payer.name} • ${tx.participantIds.length} ${s.people}'}',
+                            '${DateFormat('HH:mm').format(tx.date)}${tx.updatedAt != null ? ' (Sửa lúc ${DateFormat('HH:mm').format(tx.updatedAt!)})' : ''} • ${tx.isPayment ? s.tabBill : '${s.paidBy} ${payer.name} • ${tx.participantIds.length} ${s.people}'}',
                             style: TextStyle(
                                 fontSize: 11,
                                 color:

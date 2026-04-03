@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../models.dart';
 import '../l10n/strings.dart';
 import 'ui_helpers.dart';
+import 'widgets/dashboard_widgets.dart';
 
 class AddTransactionModal extends StatefulWidget {
   final Transaction? initialTransaction;
@@ -53,9 +54,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         ? tx.participantIds.toSet()
         : state.people.map((p) => p.id).toSet();
 
-    // Default to Food as requested
     _category = tx?.category ?? Category.food;
-
     _isCustomSplit = tx?.customAmounts != null;
 
     for (var person in state.people) {
@@ -124,78 +123,90 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     final cs = Theme.of(context).colorScheme;
     final fmt = NumberFormat('#,###', 'en_US');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF0E0E1A).withValues(alpha: 0.9)
-            : Colors.white.withValues(alpha: 0.9),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border.all(
-            color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1),
-            width: 1.5),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        left: 16,
-        right: 16,
-        top: 12,
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A2E).withValues(alpha: 0.7) : Colors.white.withValues(alpha: 0.8),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : cs.primary.withValues(alpha: 0.1),
+                    width: 1.5),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                left: 16,
+                right: 16,
+                top: 12,
+              ),
+              child: Stack(
                 children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                          color: isDark ? Colors.white12 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10)),
+                  const LiquidBackground(),
+                  Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                  color: isDark ? Colors.white24 : Colors.black12,
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                          Text(
+                            _isEditing ? s.editExpenseTitle : s.addExpenseTitle,
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                                fontFamily: 'Outfit'),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _descriptionController,
+                            hint: s.descriptionHint,
+                            icon: Icons.edit_rounded,
+                            isDark: isDark,
+                            cs: cs,
+                            height: 70,
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) return s.enterDescription;
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMainAmountField(isDark: isDark, cs: cs, s: s),
+                          const SizedBox(height: 12),
+                          _buildDateTimeButton(isDark: isDark, cs: cs, s: s),
+                          const SizedBox(height: 16),
+                          _headerLabel(s.whoPays, Icons.person_rounded, cs, isDark),
+                          const SizedBox(height: 8),
+                          _buildPayerPicker(state, isDark, cs),
+                          const SizedBox(height: 16),
+                          _headerLabel(s.category, Icons.grid_view_rounded, cs, isDark),
+                          const SizedBox(height: 8),
+                          _buildCategoryPicker(s, isDark, cs),
+                          const SizedBox(height: 20),
+                          _buildSplitSection(s, isDark, cs, state, fmt),
+                          const SizedBox(height: 24),
+                          _buildConfirmButton(cs, s, state),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
                   ),
-                  Text(
-                    _isEditing ? s.editExpenseTitle : s.addExpenseTitle,
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                        fontFamily: 'Outfit'),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _descriptionController,
-                    hint: s.descriptionHint,
-                    icon: Icons.edit_rounded,
-                    isDark: isDark,
-                    cs: cs,
-                    height: 50,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildMainAmountField(isDark: isDark, cs: cs, s: s),
-                  const SizedBox(height: 12),
-                  _buildDateTimeButton(isDark: isDark, cs: cs, s: s),
-                  const SizedBox(height: 16),
-                  _headerLabel(s.whoPays, Icons.person_rounded, cs, isDark),
-                  const SizedBox(height: 8),
-                  _buildPayerPicker(state, isDark, cs),
-                  const SizedBox(height: 16),
-                  _headerLabel(s.category, Icons.grid_view_rounded, cs, isDark),
-                  const SizedBox(height: 8),
-                  _buildCategoryPicker(s, isDark, cs),
-                  const SizedBox(height: 20),
-                  _buildSplitSection(s, isDark, cs, state, fmt),
-                  const SizedBox(height: 24),
-                  _buildConfirmButton(cs, s, state),
-                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -226,12 +237,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(colors: [
-          cs.primary.withValues(alpha: 0.15),
-          cs.primary.withValues(alpha: 0.05)
-        ]),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
         border:
-            Border.all(color: cs.primary.withValues(alpha: 0.2), width: 1.5),
+            Border.all(color: cs.primary.withValues(alpha: 0.1), width: 1.5),
       ),
       child: TextFormField(
         controller: _amountController,
@@ -251,6 +259,11 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
           hintStyle:
               TextStyle(color: cs.primary.withValues(alpha: 0.2), fontSize: 22),
         ),
+        validator: (val) {
+          final amt = _totalInputAmount;
+          if (amt <= 0) return s.enterAmount;
+          return null;
+        },
       ),
     );
   }
@@ -527,14 +540,20 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                                 ? avatarColor
                                 : Colors.grey.withValues(alpha: 0.2),
                             width: 1.5),
-                        image: p.avatarUrl.isNotEmpty &&
-                                File(p.avatarUrl).existsSync()
-                            ? DecorationImage(
-                                image: FileImage(File(p.avatarUrl)),
-                                fit: BoxFit.cover)
+                        image: p.avatarUrl.isNotEmpty
+                            ? (p.avatarUrl.startsWith('http')
+                                ? DecorationImage(
+                                    image: NetworkImage(p.avatarUrl),
+                                    fit: BoxFit.cover)
+                                : (File(p.avatarUrl).existsSync()
+                                    ? DecorationImage(
+                                        image: FileImage(File(p.avatarUrl)),
+                                        fit: BoxFit.cover)
+                                    : null))
                             : null),
                     child: p.avatarUrl.isEmpty ||
-                            !File(p.avatarUrl).existsSync()
+                            (!p.avatarUrl.startsWith('http') &&
+                                !File(p.avatarUrl).existsSync())
                         ? CircleAvatar(
                             backgroundColor: avatarColor.withValues(
                                 alpha: isIncluded ? 0.2 : 0.05),
@@ -654,6 +673,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         category: _category,
         isPayment: widget.initialTransaction?.isPayment ?? false,
         customAmounts: customAmounts,
+        updatedAt: _isEditing ? DateTime.now() : null,
       );
 
       if (_isEditing) {
@@ -672,11 +692,13 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     required bool isDark,
     required ColorScheme cs,
     required double height,
+    String? Function(String?)? validator,
   }) {
     return Container(
-      height: height,
+      constraints: BoxConstraints(minHeight: height),
       child: TextFormField(
         controller: controller,
+        validator: validator,
         style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,

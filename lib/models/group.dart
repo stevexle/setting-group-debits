@@ -25,12 +25,30 @@ class Group {
         'syncId': syncId,
       };
 
+  // Firestore only needs metadata (name, people, memberUids)
+  // Transactions are stored in a separate subcollection for efficiency.
+  Map<String, dynamic> toFirestoreMetadata() => {
+        'id': id,
+        'name': name,
+        'people': people.map((p) => p.toJson()).toList(),
+        'syncId': syncId,
+        'memberUids': people
+            .where((p) => p.userId != null)
+            .map((p) => p.userId!)
+            .toList(),
+      };
+
   factory Group.fromJson(Map<String, dynamic> json) => Group(
         id: json['id'],
         name: json['name'],
-        people: (json['people'] as List).map((p) => Person.fromJson(p)).toList(),
-        transactions:
-            (json['transactions'] as List).map((t) => Transaction.fromJson(t)).toList(),
+        people: json['people'] is List
+            ? (json['people'] as List).map((p) => Person.fromJson(p)).toList()
+            : const [],
+        transactions: json['transactions'] is List
+            ? (json['transactions'] as List)
+                .map((t) => Transaction.fromJson(t))
+                .toList()
+            : const [],
         syncId: json['syncId'],
       );
 

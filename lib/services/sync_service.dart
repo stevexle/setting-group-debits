@@ -8,76 +8,157 @@ class SyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  /// Pushes metadata updates (name, people) to the main group document.
   Future<void> pushUpdate(Group group) async {
     if (group.syncId == null) return;
     try {
-      debugPrint("Firebase: Pushing update for group ${group.syncId}");
-      await _firestore.collection('groups').doc(group.syncId).set(group.toJson());
+      final data = group.toJson();
+      data.remove('transactions'); // Ensure transactions are NOT in the main doc
+      await _firestore.collection('groups').doc(group.syncId).set(data, SetOptions(merge: true));
     } catch (e) {
-      debugPrint("Firebase: Push update error: $e");
+      debugPrint("Firebase: pushUpdate error: $e");
     }
   }
 
+  /// Pushes a single transaction to the 'transactions' subcollection.
+  Future<void> pushTransaction(String syncId, Transaction tx) async {
+    try {
+      final batch = _firestore.batch();
+      final groupRef = _firestore.collection('groups').doc(syncId);
+      final txRef = groupRef.collection('transactions').doc(tx.id);
+
+      batch.set(txRef, tx.toJson());
+      batch.update(groupRef, {'lastUpdate': FieldValue.serverTimestamp()});
+      
+      await batch.commit();
+    } catch (e) {
+      debugPrint("Firebase: pushTransaction error: $e");
+    }
+  }
+
+  /// Deletes a single transaction from the subcollection.
+  Future<void> deleteTransaction(String syncId, String txId) async {
+    try {
+      await _firestore.collection('groups').doc(syncId).collection('transactions').doc(txId).delete();
+    } catch (e) {
+      debugPrint("Firebase: deleteTransaction error: $e");
+    }
+  }
+
+  /// Purges all transaction history (subcollection AND legacy array).
+  Future<void> purgeTransactions(String syncId) async {
+    try {
+      final groupRef = _firestore.collection('groups').doc(syncId);
+      
+      // 1. Delete legacy 'transactions' array field
+      await groupRef.update({'transactions': FieldValue.delete()});
+
+      // 2. Delete all docs in subcollection using partition logic (batch)
+      final snap = await groupRef.collection('transactions').get();
+      if (snap.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (var doc in snap.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint("Firebase: purgeTransactions error: $e");
+    }
+  }
+
+  /// Deletes an entire group document and its subcollections.
+  Future<void> deleteCloudGroup(String syncId) async {
+    try {
+      final groupRef = _firestore.collection('groups').doc(syncId);
+      final txSnap = await groupRef.collection('transactions').get();
+      
+      final batch = _firestore.batch();
+      for (var d in txSnap.docs) {
+        batch.delete(d.reference);
+      }
+      batch.delete(groupRef);
+      await batch.commit();
+    } catch (e) {
+      debugPrint("Firebase: deleteCloudGroup error: $e");
+    }
+  }
+
+  /// Uploads an avatar image to Firebase Storage and returns the download URL.
   Future<String?> uploadAvatar(String localPath) async {
     if (localPath.isEmpty || localPath.startsWith('http')) return localPath;
     try {
       final file = File(localPath);
-      if (!file.existsSync()) {
-        debugPrint("Firebase: Local file does not exist at $localPath");
-        return localPath;
-      }
+      if (!file.existsSync()) return localPath;
 
       final fileName = "${DateTime.now().millisecondsSinceEpoch}_${localPath.split('/').last}";
       final ref = _storage.ref().child('avatars').child(fileName);
-      
-      debugPrint("Firebase: Uploading avatar to ${ref.fullPath} from $localPath (size: ${file.lengthSync()} bytes)...");
-      
+
       final snapshot = await ref.putFile(file);
-      debugPrint("Firebase: File uploaded to bucket ${snapshot.ref.bucket}. State: ${snapshot.state}");
-      
       if (snapshot.state == TaskState.success) {
-        final downloadUrl = await snapshot.ref.getDownloadURL();
-        debugPrint("Firebase: Avatar uploaded successfully: $downloadUrl");
-        return downloadUrl;
-      } else {
-        throw "Upload failed with state: ${snapshot.state}";
+        return await snapshot.ref.getDownloadURL();
       }
     } catch (e) {
-      debugPrint("Firebase: Avatar upload error detail: $e");
-      if (e.toString().contains('object-not-found')) {
-        debugPrint("Firebase TIP: Ensure your Storage is initialized in Firebase Console and rules allow access.");
-      }
-      return localPath;
+      debugPrint("Firebase: uploadAvatar error: $e");
     }
+    return localPath;
   }
 
-  Future<String?> enableSync(Group group) async {
-    try {
-      debugPrint("Firebase: Enabling sync for ${group.name}...");
-      final docRef = await _firestore.collection('groups').add(group.toJson());
-      // Re-set with the newly generated ID
-      final updatedGroup = group.copyWith(syncId: docRef.id);
-      await _firestore.collection('groups').doc(docRef.id).set(updatedGroup.toJson());
-      return docRef.id;
-    } catch (e) {
-      debugPrint("Firebase: Enable sync error: $e");
-      return null;
-    }
-  }
-
+  /// Fetches a group by ID (Invite Code).
   Future<Group?> fetchGroup(String inviteCode) async {
     try {
       final doc = await _firestore.collection('groups').doc(inviteCode).get();
       if (doc.exists) {
-        return Group.fromJson(Map<String, dynamic>.from(doc.data()!));
+        final data = Map<String, dynamic>.from(doc.data()!);
+        final txSnap = await _firestore.collection('groups').doc(inviteCode).collection('transactions').get();
+        data['transactions'] = txSnap.docs.map((d) => d.data()).toList();
+        return Group.fromJson(data);
       }
     } catch (e) {
-      debugPrint("Firebase: Fetch group error: $e");
+      debugPrint("Firebase: fetchGroup error: $e");
     }
     return null;
   }
 
-  Stream<DocumentSnapshot> getSyncStream(String syncId) {
-    return _firestore.collection('groups').doc(syncId).snapshots();
+  /// Enables cloud sync for a local group.
+  Future<String?> enableSync(Group group) async {
+    try {
+      final data = group.toJson();
+      data['transactions'] = []; // Subcollection handles transactions
+      final docRef = await _firestore.collection('groups').add(data);
+      
+      final syncId = docRef.id;
+      // Update with own ID
+      await docRef.update({'syncId': syncId});
+      
+      // Push existing transactions
+      for (final tx in group.transactions) {
+        await pushTransaction(syncId, tx);
+      }
+      return syncId;
+    } catch (e) {
+      debugPrint("Firebase: enableSync error: $e");
+      return null;
+    }
+  }
+
+  /// Streams for real-time synchronization.
+  Stream<DocumentSnapshot> getSyncStream(String syncId) => _firestore.collection('groups').doc(syncId).snapshots();
+  Stream<QuerySnapshot> getTransactionsStream(String syncId) => 
+      _firestore.collection('groups').doc(syncId).collection('transactions').orderBy('date', descending: true).snapshots();
+
+  /// Fetches all groups where the user is a member.
+  Future<List<Group>> fetchGroupsForUser(String uid) async {
+    try {
+      final snapshot = await _firestore.collection('groups').where('memberUids', arrayContains: uid).get();
+      return snapshot.docs.map((doc) {
+        final data = Map<String, dynamic>.from(doc.data());
+        data['transactions'] = []; // Transactions are handled via subcollections/streams
+        return Group.fromJson(data);
+      }).toList();
+    } catch (e) {
+      debugPrint("Firebase: fetchGroupsForUser error: $e");
+      return [];
+    }
   }
 }

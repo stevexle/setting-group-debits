@@ -6,6 +6,8 @@ class Person {
   final String avatarUrl;
   final int colorIndex;
   final String? fcmToken;
+  final String? userId; // For identifying "Me" via Google/Firebase UID
+  final String? email;
 
   Person({
     String? id,
@@ -13,6 +15,8 @@ class Person {
     this.avatarUrl = '',
     int? colorIndex,
     this.fcmToken,
+    this.userId,
+    this.email,
   })  : id = id ?? const Uuid().v4(),
         colorIndex = colorIndex ?? (DateTime.now().millisecondsSinceEpoch % 8);
 
@@ -22,6 +26,8 @@ class Person {
         'avatarUrl': avatarUrl,
         'colorIndex': colorIndex,
         'fcmToken': fcmToken,
+        'userId': userId,
+        'email': email,
       };
 
   factory Person.fromJson(Map<String, dynamic> json) => Person(
@@ -30,19 +36,26 @@ class Person {
         avatarUrl: json['avatarUrl'] ?? '',
         colorIndex: json['colorIndex'] ?? 0,
         fcmToken: json['fcmToken'],
+        userId: json['userId'],
+        email: json['email'],
       );
 
-  Person copyWith(
-          {String? name,
-          String? avatarUrl,
-          int? colorIndex,
-          String? fcmToken}) =>
+  Person copyWith({
+    String? name,
+    String? avatarUrl,
+    int? colorIndex,
+    String? fcmToken,
+    String? userId,
+    String? email,
+  }) =>
       Person(
         id: id,
         name: name ?? this.name,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         colorIndex: colorIndex ?? this.colorIndex,
         fcmToken: fcmToken ?? this.fcmToken,
+        userId: userId ?? this.userId,
+        email: email ?? this.email,
       );
 
   @override

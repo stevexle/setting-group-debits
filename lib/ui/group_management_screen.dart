@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,9 +5,24 @@ import '../state/app_state.dart';
 import '../models.dart';
 import '../l10n/strings.dart';
 import 'ui_helpers.dart';
+import 'widgets/dashboard/common_widgets.dart';
 
-class GroupManagementScreen extends StatelessWidget {
+class GroupManagementScreen extends StatefulWidget {
   const GroupManagementScreen({super.key});
+
+  @override
+  State<GroupManagementScreen> createState() => _GroupManagementScreenState();
+}
+
+class _GroupManagementScreenState extends State<GroupManagementScreen> {
+  final _idController = TextEditingController();
+  bool _isJoining = false;
+
+  @override
+  void dispose() {
+    _idController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,452 +33,274 @@ class GroupManagementScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0E0E1A) : const Color(0xFFF5F5FF),
+      appBar: AppBar(
+        title: Text(s.myGroups, style: const TextStyle(fontWeight: FontWeight.w900, fontFamily: 'Outfit')),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: Stack(
         children: [
-          if (isDark) ...[
-            _ambientGlow(top: -100, right: -100, color: cs.primary, opacity: 0.15, size: 400),
-            _ambientGlow(bottom: 100, left: -100, color: Colors.purpleAccent, opacity: 0.1, size: 350),
-          ] else ...[
-            _ambientGlow(top: -100, right: -100, color: cs.primary, opacity: 0.1, size: 400),
-          ],
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 120,
-                pinned: true,
-                backgroundColor: Colors.transparent,
-                leading: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                    onPressed: () => Navigator.pop(context)),
-                flexibleSpace: FlexibleSpaceBar(
-                    title: Text(s.adminGroups,
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                            fontFamily: 'Outfit')),
-                    centerTitle: true),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (state.activeGroupId != null && state.isSynced) ...[
-                        _MeSection(state: state, isDark: isDark, cs: cs),
-                        const SizedBox(height: 24),
-                      ],
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _ActionCard(
-                              label: s.addGroup,
-                              sublabel: 'New local group',
-                              icon: Icons.add_rounded,
-                              color: cs.primary,
-                              onTap: () => _showCreateGroup(context, state),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _ActionCard(
-                              label: 'Join Group',
-                              sublabel: 'Use invite code',
-                              icon: Icons.group_add_rounded,
-                              color: Colors.orangeAccent,
-                              onTap: () => _showJoinGroup(context, state),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: state.groups.length,
-                        itemBuilder: (ctx, i) {
-                          final group = state.groups[i];
-                          final isSelected = group.id == state.activeGroupId;
-                          return _GroupCard(
-                            group: group,
-                            isSelected: isSelected,
-                            isDark: isDark,
-                            cs: cs,
-                            s: s,
-                            onTap: () {
-                              state.switchGroup(group.id);
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('${s.switchedTo} ${group.name}'),
-                                  behavior: SnackBarBehavior.floating));
-                            },
-                            onEdit: () => _showEditGroupName(context, state, group, s),
-                            onDelete: () => _showDeleteGroupConfirm(context, state, group, s),
-                            onSync: () async {
-                              if (group.syncId == null) {
-                                await state.enableSync();
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                    content: Text('Firebase Sync Enabled!'),
-                                    behavior: SnackBarBehavior.floating));
-                              } else {
-                                await Clipboard.setData(ClipboardData(text: group.syncId!));
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                    content: Text('Invite code copied to clipboard!'),
-                                    behavior: SnackBarBehavior.floating));
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+          const LiquidBackground(),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 600;
+              final horizontalPadding = isWide ? (constraints.maxWidth - 600) / 2 : 12.0;
+
+              return ListView(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildJoinCreateCard(context, state, s, cs, isDark),
+                  const SizedBox(height: 24),
+                  if (state.groups.isEmpty)
+                    EmptyCard(icon: Icons.group_off_rounded, message: s.noGroupsYet)
+                  else if (isWide)
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 0,
+                      childAspectRatio: 2.2,
+                      children: state.groups.map((group) => _buildGroupCard(context, state, group, s, cs, isDark)).toList(),
+                    )
+                  else
+                    ...state.groups.map((group) => _buildGroupCard(context, state, group, s, cs, isDark)),
+                ],
+              );
+            },
+          ),
+          if (_isJoining)
+            Container(
+              color: Colors.black45,
+              child: const Center(
+                child: GlassContainer(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
                 ),
               ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJoinCreateCard(BuildContext context, AppState state, AppStrings s, ColorScheme cs, bool isDark) {
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.joinOrCreate,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              color: cs.primary.withValues(alpha: 0.8),
+              letterSpacing: 1.2,
+              fontFamily: 'Outfit',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: StyledTextField(controller: _idController, hint: s.inviteCodeHint)),
+              const SizedBox(width: 8),
+              PrimaryChipButton(
+                label: s.join,
+                icon: Icons.login_rounded,
+                color: cs.primary,
+                onTap: () async {
+                  final id = _idController.text.trim();
+                  if (id.isNotEmpty) {
+                    setState(() => _isJoining = true);
+                    try {
+                      await state.joinSyncGroup(id);
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(s.failedToJoin), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating),
+                        );
+                      }
+                    } finally {
+                      if (mounted) setState(() => _isJoining = false);
+                    }
+                  }
+                },
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: Colors.white10),
+          const SizedBox(height: 10),
+          Center(
+            child: PrimaryChipButton(
+              label: s.addGroup,
+              icon: Icons.add_rounded,
+              color: const Color(0xFF10B981),
+              onTap: () => _showCreateDialog(context, state, s),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showCreateGroup(BuildContext context, AppState state) {
-    final s = AppStrings.of(context);
-    final ctrl = TextEditingController();
-    UIHelpers.showLiquidDialog(
-        context: context,
-        title: s.newGroupName,
-        content: _StyledTextField(controller: ctrl, hint: 'e.g. Travel 2024'),
-        confirmLabel: s.add,
-        onConfirm: () => state.createGroup(ctrl.text.trim()));
-  }
+  Widget _buildGroupCard(BuildContext context, AppState state, Group group, AppStrings s, ColorScheme cs, bool isDark) {
+    final isSelected = group.id == state.activeGroupId;
+    final inviteCode = group.syncId;
 
-  void _showJoinGroup(BuildContext context, AppState state) {
-    final ctrl = TextEditingController();
-    UIHelpers.showLiquidDialog(
-        context: context,
-        title: 'Join Synced Group',
-        content: _StyledTextField(controller: ctrl, hint: 'Enter Invite Code (ID)'),
-        confirmLabel: 'Join',
-        onConfirm: () => state.joinSyncGroup(ctrl.text.trim()));
-  }
-
-  void _showEditGroupName(BuildContext context, AppState state, Group group, AppStrings s) {
-    final ctrl = TextEditingController(text: group.name);
-    UIHelpers.showLiquidDialog(
-        context: context,
-        title: s.editName,
-        content: _StyledTextField(controller: ctrl, hint: s.editName),
-        confirmLabel: s.save,
-        onConfirm: () => state.setGroupName(group.id, ctrl.text.trim()));
-  }
-
-  void _showDeleteGroupConfirm(BuildContext context, AppState state, Group group, AppStrings s) {
-    if (state.groups.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('At least one group must be maintained.'),
-          behavior: SnackBarBehavior.floating));
-      return;
-    }
-    if (!state.isGroupBalanced(group.id)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('All members must have 0 balance to delete this group.'),
-          behavior: SnackBarBehavior.floating));
-      return;
-    }
-    UIHelpers.showLiquidDialog(
-        context: context,
-        title: s.deleteGroupConfirm,
-        content: Text(s.deleteGroupMsg, style: TextStyle(color: Colors.grey.shade500)),
-        confirmLabel: s.delete,
-        isDestructive: true,
-        onConfirm: () => state.deleteGroup(group.id));
-  }
-
-  Widget _ambientGlow(
-      {double? top,
-      double? bottom,
-      double? left,
-      double? right,
-      required Color color,
-      required double opacity,
-      required double size}) {
-    return Positioned(
-        top: top,
-        bottom: bottom,
-        left: left,
-        right: right,
-        child: IgnorePointer(
-            child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      color.withValues(alpha: opacity),
-                      Colors.transparent
-                    ])))));
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  final String label, sublabel;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  const _ActionCard(
-      {required this.label,
-      required this.sublabel,
-      required this.icon,
-      required this.color,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [color, color.withValues(alpha: 0.8)]),
-              boxShadow: [
-                BoxShadow(
-                    color: color.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))
-              ]),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(10),
+        border: Border.all(
+          color: isSelected ? cs.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05),
+          width: isSelected ? 1.5 : 1.0,
+        ),
+        child: InkWell(
+          onTap: () {
+            state.switchGroup(group.id);
+            Navigator.pop(context);
+          },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white24),
-                  child: Icon(icon, color: Colors.white, size: 24)),
-              const SizedBox(height: 12),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      fontFamily: 'Outfit')),
-              Text(sublabel,
-                  style: TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      group.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected ? cs.primary : (isDark ? Colors.white : Colors.black87),
+                        fontFamily: 'Outfit',
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(Icons.check_circle_rounded, color: cs.primary, size: 18),
+                  const SizedBox(width: 4),
+                  Builder(
+                    builder: (ctx) {
+                      final isBalanced = state.isGroupBalanced(group.id);
+                      final canDelete = state.groups.length > 1 && isBalanced;
+                      return IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          Icons.delete_outline_rounded, 
+                          size: 18, 
+                          color: canDelete 
+                              ? Colors.redAccent.withValues(alpha: 0.8) 
+                              : (isDark ? Colors.white10 : Colors.black12),
+                        ),
+                        onPressed: () => _handleDeleteGroup(context, state, group, s),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                   Icon(Icons.people_outline_rounded, size: 10, color: isDark ? Colors.white38 : Colors.black38),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${group.people.length} ${s.membersCount}',
+                    style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              if (inviteCode != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.inviteCode,
+                              style: TextStyle(fontSize: 7, fontWeight: FontWeight.w900, color: cs.primary.withValues(alpha: 0.7), letterSpacing: 0.8),
+                            ),
+                            Text(
+                              inviteCode,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white70, fontFamily: 'monospace'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.copy_rounded, size: 14, color: Colors.white38),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: inviteCode));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(s.codeCopied), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 1)),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-      );
-}
-
-class _GroupCard extends StatelessWidget {
-  final Group group;
-  final bool isSelected, isDark;
-  final ColorScheme cs;
-  final AppStrings s;
-  final VoidCallback onTap, onEdit, onDelete, onSync;
-  const _GroupCard(
-      {required this.group,
-      required this.isSelected,
-      required this.isDark,
-      required this.cs,
-      required this.s,
-      required this.onTap,
-      required this.onEdit,
-      required this.onDelete,
-      required this.onSync});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    color: isSelected
-                        ? cs.primary.withValues(alpha: 0.1)
-                        : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
-                    border: Border.all(
-                        color: isSelected
-                            ? cs.primary.withValues(alpha: 0.3)
-                            : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-                        width: isSelected ? 1.5 : 0.5)),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle, color: cs.primary.withValues(alpha: 0.1)),
-                            child: Icon(
-                                group.syncId != null ? Icons.cloud_done_rounded : Icons.folder_rounded,
-                                color: cs.primary,
-                                size: 24)),
-                        const SizedBox(width: 16),
-                        Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(group.name,
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                                        fontFamily: 'Outfit'),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
-                              ),
-                              if (group.syncId != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 6),
-                                  child: Icon(Icons.sync_rounded, color: Colors.blueAccent, size: 14),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text('${group.people.length} ${s.people} • ${group.transactions.length} txs',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.white54 : Colors.black54,
-                                  fontWeight: FontWeight.w600))
-                        ])),
-                        if (isSelected)
-                          Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.green),
-                              child: const Icon(Icons.check, color: Colors.white, size: 12)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                      _CompactActionIcon(
-                        icon: group.syncId == null ? Icons.cloud_upload_outlined : Icons.share_rounded,
-                        onTap: onSync,
-                        isDark: isDark,
-                        color: group.syncId == null ? Colors.blue : Colors.blueAccent,
-                      ),
-                      const SizedBox(width: 8),
-                      _CompactActionIcon(icon: Icons.edit_rounded, onTap: onEdit, isDark: isDark),
-                      if (context.read<AppState>().groups.length > 1) ...[
-                        const SizedBox(width: 8),
-                        _CompactActionIcon(
-                            icon: Icons.delete_outline_rounded,
-                            onTap: onDelete,
-                            isDark: isDark,
-                            isDestructive: true)
-                      ]
-                    ]),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
-class _CompactActionIcon extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool isDark;
-  final bool isDestructive;
-  final Color? color;
-  const _CompactActionIcon(
-      {required this.icon,
-      required this.onTap,
-      required this.isDark,
-      this.isDestructive = false,
-      this.color});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: isDestructive
-                  ? Colors.red.withValues(alpha: 0.1)
-                  : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05))),
-          child: Icon(icon,
-              size: 18,
-              color: isDestructive
-                  ? Colors.red
-                  : (color ?? (isDark ? Colors.white70 : Colors.black54)))));
-}
-
-class _StyledTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  const _StyledTextField({required this.controller, required this.hint});
-  @override
-  Widget build(BuildContext context) => TextField(
-      controller: controller,
-      autofocus: true,
-      decoration: InputDecoration(
-          hintText: hint,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-          filled: true,
-          fillColor: Colors.grey.withValues(alpha: 0.1)));
-}
-class _MeSection extends StatelessWidget {
-  final AppState state;
-  final bool isDark;
-  final ColorScheme cs;
-  const _MeSection({required this.state, required this.isDark, required this.cs});
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.people.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Me (This device)',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, fontFamily: 'Outfit')),
-      const SizedBox(height: 12),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          children: state.people.map((p) {
-            final isMe = p.fcmToken != null; // Simple check for prototype
-            return GestureDetector(
-              onTap: () => _confirmClaim(context, p),
-              child: Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: isMe ? cs.primary : (isDark ? Colors.white10 : Colors.white),
-                    border: Border.all(color: isMe ? cs.primary : Colors.transparent)),
-                child: Text(p.name,
-                    style: TextStyle(
-                        color: isMe ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13)),
-              ),
-            );
-          }).toList(),
-        ),
       ),
-      const SizedBox(height: 4),
-      Text('Select your profile to receive reminders.',
-          style: TextStyle(fontSize: 11, color: isDark ? Colors.white24 : Colors.black26))
-    ]);
+    );
   }
 
-  void _confirmClaim(BuildContext context, Person person) {
+  void _showCreateDialog(BuildContext context, AppState state, AppStrings s) {
+    final ctrl = TextEditingController();
     UIHelpers.showLiquidDialog(
+      context: context,
+      title: s.newGroup,
+      content: StyledTextField(controller: ctrl, hint: s.groupNameHint),
+      confirmLabel: s.create,
+      onConfirm: () => state.createGroup(ctrl.text.trim()),
+    );
+  }
+
+  void _handleDeleteGroup(BuildContext context, AppState state, Group group, AppStrings s) {
+    if (state.groups.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.cannotDeleteLastGroup), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
+    if (!state.isGroupBalanced(group.id)) {
+      UIHelpers.showLiquidDialog(
         context: context,
-        title: 'Claim Profile',
-        content: Text('Are you ${person.name}? This will associate your device for notifications.'),
-        confirmLabel: 'Yes, that\'s me',
-        onConfirm: () => state.claimPerson(person.id));
+        title: s.cannotClear,
+        content: Text(s.outstandingDebtsError, 
+          style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500)),
+        confirmLabel: s.understood,
+        onConfirm: () {},
+      );
+      return;
+    }
+
+    UIHelpers.showLiquidDialog(
+      context: context,
+      title: s.deleteGroupConfirm,
+      content: Text(s.deleteGroupConfirmMsg.replaceAll('{name}', group.name), 
+        style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500)),
+      confirmLabel: s.delete,
+      isDestructive: true,
+      onConfirm: () => state.deleteGroup(group.id),
+    );
   }
 }

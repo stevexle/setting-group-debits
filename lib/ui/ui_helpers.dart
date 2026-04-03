@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models.dart';
 import '../l10n/strings.dart';
 
@@ -60,55 +61,42 @@ class UIHelpers {
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-                    isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
-                  ],
-                ),
-                border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Flexible(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-                          const SizedBox(height: 16),
-                          content,
-                        ],
-                      ),
-                    ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+                      const SizedBox(height: 16),
+                      content,
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  Row(children: [
-                    Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context).cancel))),
-                    const SizedBox(width: 12),
-                    Expanded(child: FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: isDestructive ? cs.error : cs.primary),
-                      onPressed: () { onConfirm(); Navigator.pop(ctx); },
-                      child: Text(confirmLabel),
-                    )),
-                  ]),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 24),
+              Row(children: [
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context).cancel))),
+                const SizedBox(width: 12),
+                Expanded(child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: isDestructive ? cs.error : cs.primary),
+                  onPressed: () { onConfirm(); Navigator.pop(ctx); },
+                  child: Text(confirmLabel),
+                )),
+              ]),
+            ],
           ),
         ),
       ),
@@ -127,57 +115,58 @@ class UIHelpers {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Dialog(
         backgroundColor: Colors.transparent,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-                    isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
-                  ],
-                ),
-                border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Flexible(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-                          const SizedBox(height: 16),
-                          content,
-                        ],
-                      ),
-                    ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+                      const SizedBox(height: 16),
+                      content,
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  Row(children: [
-                    Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.of(context).cancel))),
-                    const SizedBox(width: 12),
-                    Expanded(child: FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: isDestructive ? cs.error : cs.primary),
-                      onPressed: () { onConfirm(); Navigator.pop(context); },
-                      child: Text(confirmLabel),
-                    )),
-                  ]),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 24),
+              Row(children: [
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.of(context).cancel))),
+                const SizedBox(width: 12),
+                Expanded(child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: isDestructive ? cs.error : cs.primary),
+                  onPressed: () { onConfirm(); Navigator.pop(context); },
+                  child: Text(confirmLabel),
+                )),
+              ]),
+            ],
           ),
         ),
       );
+  }
+  static String formatSmartDate(DateTime dt, AppStrings s) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateOnly = DateTime(dt.year, dt.month, dt.day);
+
+    if (dateOnly == today) {
+      return DateFormat('HH:mm').format(dt);
+    } else if (dateOnly == yesterday) {
+      return '${s.yesterday} ${DateFormat('HH:mm').format(dt)}';
+    } else {
+      return '${DateFormat('dd/MM').format(dt)} ${DateFormat('HH:mm').format(dt)}';
+    }
   }
 }

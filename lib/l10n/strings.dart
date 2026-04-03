@@ -8,94 +8,126 @@ class AppStrings {
   }
 
   static const _vi = AppStrings._(
-    appTitle: 'Chia Tiền Nhóm',
+    appTitle: 'BillShare',
     members: 'Thành viên',
     addMember: 'Thêm',
-    history: 'Lịch sử',
-    tabBill: 'Quyết toán',
+    history: 'Lịch sử chi tiêu',
+    tabBill: 'Hạch toán',
     tabPay: 'Chi tiêu',
     settlement: 'Quyết toán',
     addExpense: 'Thêm chi tiêu',
     today: 'Hôm nay',
     yesterday: 'Hôm qua',
     deleteAll: 'Xóa tất cả',
-    confirmDelete: 'Xác nhận xóa?',
-    confirmDeleteMsg: 'Hành động này sẽ xóa toàn bộ thành viên và giao dịch.',
+    confirmDelete: 'Xóa toàn bộ?',
+    confirmDeleteMsg: 'Hành động này sẽ xóa tất cả thành viên và giao dịch.',
     deleteMember: 'Xóa thành viên?',
-    deleteMemberMsg: 'Sẽ xóa toàn bộ giao dịch liên quan đến thành viên này.',
-    cancel: 'Huỷ',
+    deleteMemberMsg: 'Không thể xóa thành viên đã tham gia vào giao dịch. Hãy xóa các giao dịch liên quan trước.',
+    cancel: 'Hủy',
     delete: 'Xóa',
     add: 'Thêm',
     edit: 'Sửa',
     save: 'Lưu',
     noMembers: 'Chưa có thành viên',
-    noMembersSubtitle: 'Thêm bạn bè để bắt đầu chia tiền',
+    noMembersSubtitle: 'Hãy thêm bạn bè để bắt đầu chia sẻ chi phí',
     noExpenses: 'Chưa có chi tiêu',
-    noExpensesSubtitle: 'Nhấn + để thêm bữa trà đá đầu tiên!',
-    allSettled: 'Tất cả đã sòng phẳng! 🎉',
-    allSettledSubtitle: 'Không có khoản nợ nào cần thanh toán',
-    greedyAlgo: 'Tối ưu hóa',
-    greedySubtitle: 'Gợi ý phương án thanh toán nhanh nhất',
-    times: 'lần',
-    paidBy: 'Người trả',
+    noExpensesSubtitle: 'Nhấn + để thêm giao dịch đầu tiên!',
+    allSettled: 'Đã hoàn thành trả nợ! 🎉',
+    allSettledSubtitle: 'Mọi người đã thanh toán hết nợ',
+    greedyAlgo: 'Thanh toán Thông minh',
+    greedySubtitle: 'Tối ưu hóa số lần chuyển khoản',
+    times: 'lượt chuyển',
+    paidBy: 'Người chi',
     people: 'người',
     enterName: 'Nhập tên...',
-    addMemberTitle: 'Thêm thành viên',
-    addExpenseTitle: 'Thêm chi tiêu mới',
-    editExpenseTitle: 'Chỉnh sửa chi tiêu',
+    addMemberTitle: 'Thêm Thành Viên',
+    addExpenseTitle: 'Thêm Chi Tiêu Mới',
+    editExpenseTitle: 'Sửa Chi Tiêu',
     deleteExpense: 'Xóa chi tiêu?',
     deleteExpenseMsg: 'Bạn có chắc chắn muốn xóa chi tiêu này?',
-    descriptionHint: 'Mô tả (ví dụ: Trà đá sáng nay)',
+    descriptionHint: 'Nội dung (vD: Ăn trưa)',
     amountHint: 'Số tiền (₫)',
-    whoPays: 'Ai là người thanh toán?',
-    whoSplits: 'Chia tiền cho những ai?',
+    whoPays: 'Ai đã chi?',
+    whoSplits: 'Chia cho ai?',
     done: 'Xong',
-    settlementTitle: 'Phương án quyết toán',
+    settlementTitle: 'Phương Án Quyết Toán',
     totalMembers: 'Thành viên',
     totalExpenses: 'Giao dịch',
     totalSpent: 'Tổng chi',
     totalPaid: 'Đã chi',
-    yourShare: 'Phần cần trả',
+    yourShare: 'Phần chia',
     weeklyTotalLabel: 'Tuần này',
     monthlyTotalLabel: 'Tháng này',
     thisWeek: 'Tuần này',
     thisMonth: 'Tháng này',
-    enterDescription: 'Hãy nhập mô tả',
-    enterAmount: 'Hãy nhập số tiền',
+    enterDescription: 'Vui lòng nhập nội dung',
+    enterAmount: 'Vui lòng nhập số tiền',
     invalidAmount: 'Số tiền không hợp lệ',
-    longPressHint: 'Giữ hoặc vuốt để sửa/xóa',
-    dateTime: 'Ngày giờ',
+    longPressHint: 'Nhấn giữ hoặc vuốt để sửa/xóa',
+    dateTime: 'Ngày & Giờ',
     settleNow: 'Đã trả',
     sharePlan: 'Chia sẻ phương án',
-    settleDone: 'Đã thanh toán xong!',
+    settleDone: 'Đã ghi nhận hạch toán!',
     category: 'Danh mục',
     categoryFood: 'Ăn uống',
-    categoryDrink: 'Café/Trà đá',
+    categoryDrink: 'Cà phê',
     categoryShopping: 'Mua sắm',
     categoryTransport: 'Di chuyển',
     categoryEntertainment: 'Giải trí',
     categoryHome: 'Sinh hoạt',
     categoryHealth: 'Sức khỏe',
     categoryOther: 'Khác',
-    lockHistory: 'Cần xóa các quyết toán trước khi sửa/xóa chi tiêu.',
+    lockHistory: 'Xóa hạch toán trước khi sửa/xóa giao dịch này.',
     myGroups: 'Nhóm của tôi',
-    addGroup: 'Thêm nhóm',
+    addGroup: 'Thêm Nhóm',
     newGroupName: 'Tên nhóm mới',
-    editName: 'Sửa tên',
+    editName: 'Đổi tên',
     manageGroups: 'Quản lý nhóm',
     groupMembers: 'Thành viên',
     groupTransactions: 'Giao dịch',
     deleteGroupConfirm: 'Xóa nhóm?',
-    deleteGroupMsg: 'Hành động này sẽ xóa vĩnh viễn nhóm và toàn bộ dữ liệu liên quan.',
-    adminGroups: 'Quản lý nhóm',
+    deleteGroupMsg: 'Hành động này sẽ xóa vĩnh viễn nhóm và dữ liệu liên quan.',
+    adminGroups: 'Quản lý Nhóm',
     switchedTo: 'Đã chuyển sang',
     splitEqual: 'Chia đều',
-    splitCustom: 'Nhập tay',
+    splitCustom: 'Tùy chỉnh',
     totalMismatch: 'Tổng tiền không khớp!',
     remainingBalance: 'Còn lại',
-    amountMismatch: 'Chưa khớp',
-    edited: 'CHỈNH SỬA',
+    amountMismatch: 'Chênh lệch',
+    edited: 'ĐÃ SỬA',
     editedAt: 'Sửa lúc',
+    logout: 'Đăng xuất',
+    oweLabel: 'Cần trả',
+    clearHistory: 'Xóa lịch sử',
+    clearHistoryMsg: 'Hành động này sẽ CHỈ xóa lịch sử giao dịch. Danh sách thành viên sẽ được giữ nguyên.',
+    resetGroup: 'Reset Nhóm',
+    resetGroupMsg: 'Hành động này sẽ xóa TOÀN BỘ thành viên và giao dịch. Bạn sẽ cần thêm lại thành viên từ đầu.',
+    cannotClear: 'Chưa thể xóa',
+    completeSettlementFirst: 'Bạn cần hoàn thành trả nợ (Balanced) hoặc chưa bắt đầu hạch toán mới có thể xóa lịch sử.',
+    understood: 'Đã hiểu',
+    inviteCode: 'Mã mời',
+    joinGroup: 'Tham gia nhóm',
+    createGroup: 'Tạo nhóm mới',
+    loginGoogle: 'Đăng nhập với Google',
+    welcome: 'Chào mừng!',
+    welcomeSubtitle: 'Quản lý nợ nhóm dễ dàng và minh bạch hơn bao giờ hết.',
+    groupResetSuccess: 'Đã reset nhóm thành công.',
+    historyClearedSuccess: 'Đã xóa lịch sử giao dịch. Thành viên được giữ nguyên.',
+    joinOrCreate: 'GIA NHẬP HOẶC TẠO MỚI',
+    inviteCodeHint: 'Mã mời',
+    join: 'Tham gia',
+    failedToJoin: 'Không thể gia nhập: Mã không hợp lệ',
+    noGroupsYet: 'Bạn chưa có nhóm nào.',
+    membersCount: 'thành viên',
+    codeCopied: 'Đã sao chép mã!',
+    newGroup: 'Nhóm mới',
+    groupNameHint: 'Ví dụ: Đi chơi Đà Lạt',
+    create: 'Tạo',
+    cannotDeleteLastGroup: 'Không thể xóa nhóm cuối cùng.',
+    outstandingDebtsError: 'Nhóm này vẫn còn nợ chưa trả. Hãy hoàn tất hạch toán trước khi xóa nhóm.',
+    deleteGroupTitle: 'Xóa nhóm?',
+    deleteGroupConfirmMsg: 'Bạn có chắc chắn muốn xóa nhóm "{name}"? Hành động này không thể hoàn tác.',
+    remindedUser: 'Đã nhắc nhở {name}',
   );
 
   static const _en = AppStrings._(
@@ -113,7 +145,7 @@ class AppStrings {
     confirmDelete: 'Delete everything?',
     confirmDeleteMsg: 'This will delete all members and transactions.',
     deleteMember: 'Delete member?',
-    deleteMemberMsg: 'All related transactions will also be deleted.',
+    deleteMemberMsg: 'Cannot delete member with transaction history. Please clear or modify related transactions first.',
     cancel: 'Cancel',
     delete: 'Delete',
     add: 'Add',
@@ -187,6 +219,38 @@ class AppStrings {
     amountMismatch: 'Mismatch',
     edited: 'EDITED',
     editedAt: 'Edited at',
+    logout: 'Logout',
+    oweLabel: 'Owes',
+    clearHistory: 'Clear History',
+    clearHistoryMsg: 'This will ONLY delete the transaction history. Group members will be kept.',
+    resetGroup: 'Reset Group',
+    resetGroupMsg: 'This will delete ALL members and ALL transactions. You will need to add members again.',
+    cannotClear: 'Cannot Clear',
+    completeSettlementFirst: 'Please complete all repayments (Balanced) or ensure no settlement started before clearing.',
+    understood: 'Got it',
+    inviteCode: 'Invite Code',
+    joinGroup: 'Join Group',
+    createGroup: 'Create Group',
+    loginGoogle: 'Sign in with Google',
+    welcome: 'Welcome!',
+    welcomeSubtitle: 'Manage group debts easily and transparently.',
+    groupResetSuccess: 'Group reset successfully.',
+    historyClearedSuccess: 'Transaction history cleared. Members kept.',
+    joinOrCreate: 'JOIN OR CREATE',
+    inviteCodeHint: 'Invite Code',
+    join: 'Join',
+    failedToJoin: 'Failed to join: Invalid ID',
+    noGroupsYet: 'You have no groups yet.',
+    membersCount: 'members',
+    codeCopied: 'Code copied!',
+    newGroup: 'New Group',
+    groupNameHint: 'e.g. Travel',
+    create: 'Create',
+    cannotDeleteLastGroup: 'Cannot delete the last group.',
+    outstandingDebtsError: 'This group has outstanding debts. Please settle all expenses before deleting.',
+    deleteGroupTitle: 'Delete Group?',
+    deleteGroupConfirmMsg: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+    remindedUser: 'Reminded {name}',
   );
 
   final String appTitle;
@@ -277,6 +341,38 @@ class AppStrings {
   final String amountMismatch;
   final String edited;
   final String editedAt;
+  final String logout;
+  final String oweLabel;
+  final String clearHistory;
+  final String clearHistoryMsg;
+  final String resetGroup;
+  final String resetGroupMsg;
+  final String cannotClear;
+  final String completeSettlementFirst;
+  final String understood;
+  final String inviteCode;
+  final String joinGroup;
+  final String createGroup;
+  final String loginGoogle;
+  final String welcome;
+  final String welcomeSubtitle;
+  final String groupResetSuccess;
+  final String historyClearedSuccess;
+  final String joinOrCreate;
+  final String inviteCodeHint;
+  final String join;
+  final String failedToJoin;
+  final String noGroupsYet;
+  final String membersCount;
+  final String codeCopied;
+  final String newGroup;
+  final String groupNameHint;
+  final String create;
+  final String cannotDeleteLastGroup;
+  final String outstandingDebtsError;
+  final String deleteGroupTitle;
+  final String deleteGroupConfirmMsg;
+  final String remindedUser;
 
   const AppStrings._({
     required this.appTitle,
@@ -367,18 +463,58 @@ class AppStrings {
     required this.amountMismatch,
     required this.edited,
     required this.editedAt,
+    required this.logout,
+    required this.oweLabel,
+    required this.clearHistory,
+    required this.clearHistoryMsg,
+    required this.resetGroup,
+    required this.resetGroupMsg,
+    required this.cannotClear,
+    required this.completeSettlementFirst,
+    required this.understood,
+    required this.inviteCode,
+    required this.joinGroup,
+    required this.createGroup,
+    required this.loginGoogle,
+    required this.welcome,
+    required this.welcomeSubtitle,
+    required this.groupResetSuccess,
+    required this.historyClearedSuccess,
+    required this.joinOrCreate,
+    required this.inviteCodeHint,
+    required this.join,
+    required this.failedToJoin,
+    required this.noGroupsYet,
+    required this.membersCount,
+    required this.codeCopied,
+    required this.newGroup,
+    required this.groupNameHint,
+    required this.create,
+    required this.cannotDeleteLastGroup,
+    required this.outstandingDebtsError,
+    required this.deleteGroupTitle,
+    required this.deleteGroupConfirmMsg,
+    required this.remindedUser,
   });
 
   String getCategoryName(Category c) {
     switch (c) {
-      case Category.food: return categoryFood;
-      case Category.drink: return categoryDrink;
-      case Category.shopping: return categoryShopping;
-      case Category.transport: return categoryTransport;
-      case Category.entertainment: return categoryEntertainment;
-      case Category.home: return categoryHome;
-      case Category.health: return categoryHealth;
-      case Category.other: return categoryOther;
+      case Category.food:
+        return categoryFood;
+      case Category.drink:
+        return categoryDrink;
+      case Category.shopping:
+        return categoryShopping;
+      case Category.transport:
+        return categoryTransport;
+      case Category.entertainment:
+        return categoryEntertainment;
+      case Category.home:
+        return categoryHome;
+      case Category.health:
+        return categoryHealth;
+      case Category.other:
+        return categoryOther;
     }
   }
 }

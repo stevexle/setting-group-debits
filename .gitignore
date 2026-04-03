@@ -5,6 +5,9 @@
 .pub-cache/
 .pub/
 build/
+.metadata
+.flutter-plugins
+.flutter-plugins-dependencies
 
 # Android
 # -----------------------
@@ -12,9 +15,11 @@ android/app/src/main/res/drawable-*/
 android/app/src/main/res/mipmap-*/
 android/app/src/main/res/values/strings.xml
 android/key.properties
+android/local.properties
 **/*.keystore
 **/*.jks
 **/google-services.json
+gradle.properties
 
 # iOS
 # -----------------------
@@ -29,23 +34,30 @@ ios/Pods/
 ios/.symlinks/
 ios/Runner/GeneratedPluginRegistrant.h
 ios/Runner/GeneratedPluginRegistrant.m
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+lib/generated_plugin_registrant.dart
 DerivedData/
 **/*.xcworkspace
-
-# macOS
-# -----------------------
-.DS_Store
-**/.DS_Store
-
-# IDE - Visual Studio Code
-# -----------------------
-.vscode/
-
-# IDE - IntelliJ IDEA
-# -----------------------
+**/xcuserdata/
+**/xcshareddata/
+**/*.mode1v3
+**/*.mode2v3
+**/*.perspectivev3
+**/*.pbxuser
+**/*.xcuserdatad
+**/*.user
+**/*.pyc
 .idea/
+.vscode/
 *.iml
 *.iws
+*.ipr
 
 # Log files
 # -----------------------
@@ -63,6 +75,9 @@ firebase.json
 firestore.rules
 firestore.indexes.json
 storage.rules
+.firebaserc
+**/firebase-debug.log
+**/ui-debug.log
 *.env
 *.env.*
 secret.yaml
@@ -73,3 +88,7 @@ ios/Firebase/
 .temp/
 .tmp/
 .swp
+*~
+*.bak
+*.old
+*.orig

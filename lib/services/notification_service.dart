@@ -45,16 +45,29 @@ class NotificationService {
   }
 
   Future<String?> getToken() async {
-    return await _fcm.getToken();
+    try {
+      return await _fcm.getToken();
+    } catch (e) {
+      debugPrint('Firebase: getToken error (expected on simulator): $e');
+      return null;
+    }
   }
 
   Future<void> subscribeToGroup(String syncId) async {
-    await _fcm.subscribeToTopic('group_$syncId');
-    debugPrint('Firebase: Subscribed to group_$syncId');
+    try {
+      await _fcm.subscribeToTopic('group_$syncId');
+      debugPrint('Firebase: Subscribed to group_$syncId');
+    } catch (e) {
+      debugPrint('Firebase: subscribeToTopic error (expected on simulator): $e');
+    }
   }
 
   Future<void> unsubscribeFromGroup(String syncId) async {
-    await _fcm.unsubscribeFromTopic('group_$syncId');
+    try {
+      await _fcm.unsubscribeFromTopic('group_$syncId');
+    } catch (e) {
+      debugPrint('Firebase: unsubscribeFromTopic error: $e');
+    }
   }
 
   void _showLocalNotification(RemoteMessage message) {

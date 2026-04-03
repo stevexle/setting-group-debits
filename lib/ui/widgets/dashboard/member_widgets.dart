@@ -219,10 +219,18 @@ class MemberCell extends StatelessWidget {
       },
       onLongPress: () {
         HapticFeedback.heavyImpact();
-        if (state.isPersonInvolvedInTransactions(person.id)) {
+        if (person.id == state.me?.id) {
           UIHelpers.showLiquidDialog(
             context: context,
-            title: s.cannotDeleteLastGroup.replaceAll('nhóm cuối cùng', 'thành viên này'), // Reusing key for 'cannot' prefix logic or similar
+            title: s.cannotClear,
+            content: Text(s.cannotDeleteSelf),
+            confirmLabel: s.understood,
+            onConfirm: () {},
+          );
+        } else if (state.isPersonInvolvedInTransactions(person.id)) {
+          UIHelpers.showLiquidDialog(
+            context: context,
+            title: s.cannotDeleteLastGroup.replaceAll('nhóm cuối cùng', 'thành viên này'), 
             content: Text(s.deleteMemberMsg),
             confirmLabel: s.understood,
             onConfirm: () {},

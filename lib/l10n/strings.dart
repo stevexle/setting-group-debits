@@ -128,6 +128,7 @@ class AppStrings {
     deleteGroupTitle: 'Xóa nhóm?',
     deleteGroupConfirmMsg: 'Bạn có chắc chắn muốn xóa nhóm "{name}"? Hành động này không thể hoàn tác.',
     remindedUser: 'Đã nhắc nhở {name}',
+    cannotDeleteSelf: 'Bạn không thể tự xóa chính mình khỏi nhóm.',
   );
 
   static const _en = AppStrings._(
@@ -251,6 +252,7 @@ class AppStrings {
     deleteGroupTitle: 'Delete Group?',
     deleteGroupConfirmMsg: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
     remindedUser: 'Reminded {name}',
+    cannotDeleteSelf: 'You cannot remove yourself from the group.',
   );
 
   final String appTitle;
@@ -373,6 +375,7 @@ class AppStrings {
   final String deleteGroupTitle;
   final String deleteGroupConfirmMsg;
   final String remindedUser;
+  final String cannotDeleteSelf;
 
   const AppStrings._({
     required this.appTitle,
@@ -495,6 +498,7 @@ class AppStrings {
     required this.deleteGroupTitle,
     required this.deleteGroupConfirmMsg,
     required this.remindedUser,
+    required this.cannotDeleteSelf,
   });
 
   String getCategoryName(Category c) {

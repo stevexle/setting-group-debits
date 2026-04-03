@@ -452,6 +452,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool removePerson(String id) {
+    if (id == me?.id) return false;
     if (isPersonInvolvedInTransactions(id)) return false;
     
     _updateActiveGroup((g) {

@@ -94,6 +94,8 @@ class AppStrings {
     totalMismatch: 'Tổng tiền không khớp!',
     remainingBalance: 'Còn lại',
     amountMismatch: 'Chưa khớp',
+    edited: 'CHỈNH SỬA',
+    editedAt: 'Sửa lúc',
   );
 
   static const _en = AppStrings._(
@@ -183,6 +185,8 @@ class AppStrings {
     totalMismatch: 'Total amount mismatch!',
     remainingBalance: 'Remaining',
     amountMismatch: 'Mismatch',
+    edited: 'EDITED',
+    editedAt: 'Edited at',
   );
 
   final String appTitle;
@@ -271,6 +275,8 @@ class AppStrings {
   final String totalMismatch;
   final String remainingBalance;
   final String amountMismatch;
+  final String edited;
+  final String editedAt;
 
   const AppStrings._({
     required this.appTitle,
@@ -359,6 +365,8 @@ class AppStrings {
     required this.totalMismatch,
     required this.remainingBalance,
     required this.amountMismatch,
+    required this.edited,
+    required this.editedAt,
   });
 
   String getCategoryName(Category c) {

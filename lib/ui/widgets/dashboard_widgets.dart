@@ -912,8 +912,8 @@ class TransactionCard extends StatelessWidget {
                                      color: Colors.blue.withValues(alpha: 0.1),
                                      border: Border.all(
                                          color: Colors.blue.withValues(alpha: 0.25))),
-                                 child: const Text('CHỈNH SỬA',
-                                     style: TextStyle(
+                                 child: Text(s.edited,
+                                     style: const TextStyle(
                                          fontSize: 7,
                                          fontWeight: FontWeight.w900,
                                          color: Colors.blue)),
@@ -923,7 +923,7 @@ class TransactionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                            '${DateFormat('HH:mm').format(tx.date)}${tx.updatedAt != null ? ' (Sửa lúc ${DateFormat('HH:mm').format(tx.updatedAt!)})' : ''} • ${tx.isPayment ? s.tabBill : '${s.paidBy} ${payer.name} • ${tx.participantIds.length} ${s.people}'}',
+                            '${DateFormat('HH:mm').format(tx.date)}${tx.updatedAt != null ? ' (${s.editedAt} ${DateFormat(tx.updatedAt!.day != tx.date.day ? 'HH:mm dd/MM' : 'HH:mm').format(tx.updatedAt!)})' : ''} • ${tx.isPayment ? s.tabBill : '${s.paidBy} ${payer.name} • ${tx.participantIds.length} ${s.people}'}',
                             style: TextStyle(
                                 fontSize: 11,
                                 color:

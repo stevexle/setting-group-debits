@@ -8,6 +8,7 @@ import '../models.dart';
 import '../l10n/strings.dart';
 import 'ui_helpers.dart';
 import 'widgets/dashboard_widgets.dart';
+import '../services/log_service.dart';
 
 class SettlementScreen extends StatelessWidget {
   const SettlementScreen({super.key});
@@ -399,7 +400,7 @@ class _Avatar extends StatelessWidget {
                             as ImageProvider,
                     fit: BoxFit.cover,
                     onError: (exception, stackTrace) =>
-                        debugPrint('Avatar image error'),
+                        log.warning('Avatar image error: $exception'),
                   )
                 : null,
           ),

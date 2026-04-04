@@ -1,6 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:setting_group_debits/services/log_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/foundation.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -19,7 +19,7 @@ class NotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      debugPrint('Firebase: User granted permission');
+      log.info('Firebase: User granted notification permission');
     }
 
     // 2. Setup Local Notifications (for foreground messages)
@@ -34,13 +34,13 @@ class NotificationService {
 
     // 4. Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Firebase: Received foreground message: ${message.notification?.title}');
+      log.info('Firebase: Received foreground message: ${message.notification?.title}');
       _showLocalNotification(message);
     });
 
     // 5. Handle when app is opened from notification
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('Firebase: App opened via notification: ${message.data}');
+      log.info('Firebase: App opened via notification: ${message.data}');
     });
   }
 
@@ -48,7 +48,7 @@ class NotificationService {
     try {
       return await _fcm.getToken();
     } catch (e) {
-      debugPrint('Firebase: getToken error (expected on simulator): $e');
+      log.warning('Firebase: getToken error (expected on simulator): $e');
       return null;
     }
   }
@@ -56,17 +56,17 @@ class NotificationService {
   Future<void> subscribeToGroup(String syncId) async {
     try {
       await _fcm.subscribeToTopic('group_$syncId');
-      debugPrint('Firebase: Subscribed to group_$syncId');
+      log.info('Firebase: Subscribed to group_$syncId');
     } catch (e) {
-      debugPrint('Firebase: subscribeToTopic error (expected on simulator): $e');
+      log.warning('Firebase: subscribeToTopic error (expected on simulator): $e');
     }
   }
 
   Future<void> unsubscribeFromGroup(String syncId) async {
     try {
       await _fcm.unsubscribeFromTopic('group_$syncId');
-    } catch (e) {
-      debugPrint('Firebase: unsubscribeFromTopic error: $e');
+    } catch (e, s) {
+      log.error('Firebase: unsubscribeFromTopic error', e, s);
     }
   }
 
@@ -94,5 +94,5 @@ class NotificationService {
 
 // Global background handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('Firebase: Handling background message ${message.messageId}');
+  log.info('Firebase: Handling background message ${message.messageId}');
 }

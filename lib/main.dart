@@ -12,6 +12,8 @@ import 'ui/dashboard_screen.dart';
 import 'ui/login_screen.dart';
 import 'services/notification_service.dart';
 
+import 'services/log_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('vi_VN', null);
@@ -20,9 +22,11 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await log.init(); // Initialize global error tracking
     await NotificationService().init();
-  } catch (e) {
-    debugPrint("Firebase initialization failed: $e");
+    log.info("App started successfully with logging enabled");
+  } catch (e, stack) {
+    log.error("Failed to initialize app", e, stack);
   }
 
   runApp(

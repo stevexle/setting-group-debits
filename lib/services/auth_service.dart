@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:setting_group_debits/services/log_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -18,9 +19,13 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
+      log.info("Starting Google Sign In...");
       await _ensureInitialized();
       final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        log.info("Google Sign In cancelled by user");
+        return null;
+      }
 
       final authorizedUser = await googleUser.authorizationClient.authorizeScopes([]);
       final accessToken = authorizedUser.accessToken;
@@ -32,20 +37,22 @@ class AuthService {
       );
 
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      log.info("Google Sign In successful for ${userCredential.user?.email}");
       return userCredential.user;
-    } catch (e) {
-      print('Google Auth Error: $e');
+    } catch (e, s) {
+      log.error('Google Auth Error', e, s);
       return null;
     }
   }
 
   Future<void> signOut() async {
     try {
+      log.info("Signing out...");
       await _ensureInitialized();
       await _googleSignIn.signOut();
       await _auth.signOut();
-    } catch (e) {
-      print('Sign Out Error: $e');
+    } catch (e, s) {
+      log.error('Sign Out Error', e, s);
     }
   }
 }

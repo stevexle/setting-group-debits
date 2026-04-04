@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:setting_group_debits/services/log_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,8 +40,11 @@ class AppState extends ChangeNotifier {
     _authService.user.listen((user) {
       _currentUser = user;
       notifyListeners();
-      if (user != null && _activeGroupId != null) {
-        _autoClaimMe();
+      if (user != null) {
+        log.setUserIdentifier(user.uid);
+        if (_activeGroupId != null) {
+          _autoClaimMe();
+        }
       }
     });
   }
@@ -181,8 +185,8 @@ class AppState extends ChangeNotifier {
         _setupSync();
         _setupNotifications();
       }
-    } catch (e) {
-      debugPrint("AppState: Load state error: $e");
+    } catch (e, s) {
+      log.error("AppState: Load state error", e, s);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -204,8 +208,8 @@ class AppState extends ChangeNotifier {
           await _syncService.pushUpdate(group!);
         }
       }
-    } catch (e) {
-      debugPrint("AppState: Save state error: $e");
+    } catch (e, s) {
+      log.error("AppState: Save state error", e, s);
     }
   }
 
@@ -601,7 +605,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> remindPerson(String personId, double amount) async {
     final person = people.firstWhere((p) => p.id == personId);
-    if (person.fcmToken != null) debugPrint('Firebase: Reminder to ${person.name} (${person.fcmToken}) for $amount');
+    if (person.fcmToken != null) log.info('Firebase: Reminder to ${person.name} (${person.fcmToken}) for $amount');
   }
 
   @override

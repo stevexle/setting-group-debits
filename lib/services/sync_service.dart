@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
+import 'package:setting_group_debits/services/log_service.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import '../models.dart';
 
 class SyncService {
@@ -15,8 +15,8 @@ class SyncService {
       final data = group.toJson();
       data.remove('transactions'); // Ensure transactions are NOT in the main doc
       await _firestore.collection('groups').doc(group.syncId).set(data, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint("Firebase: pushUpdate error: $e");
+    } catch (e, s) {
+      log.error("Firebase: pushUpdate error", e, s);
     }
   }
 
@@ -31,8 +31,8 @@ class SyncService {
       batch.update(groupRef, {'lastUpdate': FieldValue.serverTimestamp()});
       
       await batch.commit();
-    } catch (e) {
-      debugPrint("Firebase: pushTransaction error: $e");
+    } catch (e, s) {
+      log.error("Firebase: pushTransaction error", e, s);
     }
   }
 
@@ -40,8 +40,8 @@ class SyncService {
   Future<void> deleteTransaction(String syncId, String txId) async {
     try {
       await _firestore.collection('groups').doc(syncId).collection('transactions').doc(txId).delete();
-    } catch (e) {
-      debugPrint("Firebase: deleteTransaction error: $e");
+    } catch (e, s) {
+      log.error("Firebase: deleteTransaction error", e, s);
     }
   }
 
@@ -62,8 +62,8 @@ class SyncService {
         }
         await batch.commit();
       }
-    } catch (e) {
-      debugPrint("Firebase: purgeTransactions error: $e");
+    } catch (e, s) {
+      log.error("Firebase: purgeTransactions error", e, s);
     }
   }
 
@@ -79,8 +79,8 @@ class SyncService {
       }
       batch.delete(groupRef);
       await batch.commit();
-    } catch (e) {
-      debugPrint("Firebase: deleteCloudGroup error: $e");
+    } catch (e, s) {
+      log.error("Firebase: deleteCloudGroup error", e, s);
     }
   }
 
@@ -98,8 +98,8 @@ class SyncService {
       if (snapshot.state == TaskState.success) {
         return await snapshot.ref.getDownloadURL();
       }
-    } catch (e) {
-      debugPrint("Firebase: uploadAvatar error: $e");
+    } catch (e, s) {
+      log.error("Firebase: uploadAvatar error", e, s);
     }
     return localPath;
   }
@@ -114,8 +114,8 @@ class SyncService {
         data['transactions'] = txSnap.docs.map((d) => d.data()).toList();
         return Group.fromJson(data);
       }
-    } catch (e) {
-      debugPrint("Firebase: fetchGroup error: $e");
+    } catch (e, s) {
+      log.error("Firebase: fetchGroup error", e, s);
     }
     return null;
   }
@@ -136,8 +136,8 @@ class SyncService {
         await pushTransaction(syncId, tx);
       }
       return syncId;
-    } catch (e) {
-      debugPrint("Firebase: enableSync error: $e");
+    } catch (e, s) {
+      log.error("Firebase: enableSync error", e, s);
       return null;
     }
   }
@@ -156,8 +156,8 @@ class SyncService {
         data['transactions'] = []; // Transactions are handled via subcollections/streams
         return Group.fromJson(data);
       }).toList();
-    } catch (e) {
-      debugPrint("Firebase: fetchGroupsForUser error: $e");
+    } catch (e, s) {
+      log.error("Firebase: fetchGroupsForUser error", e, s);
       return [];
     }
   }

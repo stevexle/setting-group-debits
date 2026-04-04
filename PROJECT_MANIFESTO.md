@@ -2,6 +2,11 @@
 
 This document defines the core principles and development standards for the BillShare application. Every new feature must strictly adhere to these rules.
 
+## 💎 0. THE CORE: BillShare Settlement Engine
+- **Priority:** This is the heart of the application. All other features (Planning, Tracking, Analytics) are inputs or enhancements to this core.
+- **Goal:** Provide the most accurate and minimal-step "Who owes who" calculation for any group of people.
+- **Status:** Frozen and Protected. Any new feature must integrate with this engine.
+
 ## 🎨 1. UI/UX: Liquid Glass Architecture
 - **Style:** Modern "Liquid Glass" theme (frosted glass effects, ambient gradients).
 - **Core Widgets:** Use `Material 3` with custom `GlassContainer` and consistent `Outfit` typography.

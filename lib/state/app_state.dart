@@ -13,17 +13,24 @@ import 'package:firebase_auth/firebase_auth.dart' show User;
 
 class AppState extends ChangeNotifier {
   final List<Group> _groups = [];
+  final List<Account> _accounts = [];
+  final List<BudgetPlan> _plans = [];
   String? _activeGroupId;
   bool _isLoading = true;
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
   Group? _cachedActiveGroup;
   String? _fcmToken;
   User? _currentUser;
+  final List<PersonalTransaction> _personalTransactions = [];
   bool _isInitializing = false;
 
   final AuthService _authService = AuthService();
   final SyncService _syncService = SyncService();
   StreamSubscription<DocumentSnapshot>? _syncSubscription;
-  StreamSubscription<QuerySnapshot>? _txSubscription;
+  StreamSubscription<QuerySnapshot>? _groupTxSubscription;
+  StreamSubscription<QuerySnapshot>? _personalTxSubscription;
+  StreamSubscription<QuerySnapshot>? _accSubscription;
 
   // Performance Cache
   List<Settlement>? _cachedSettlements;
@@ -42,9 +49,14 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       if (user != null) {
         log.setUserIdentifier(user.uid);
+        _setupAccSync();
+        _setupPersonalTxSync();
         if (_activeGroupId != null) {
           _autoClaimMe();
         }
+      } else {
+        _accSubscription?.cancel();
+        _personalTxSubscription?.cancel();
       }
     });
   }
@@ -157,9 +169,23 @@ class AppState extends ChangeNotifier {
     return _cachedActiveGroup;
   }
 
+  List<Account> get accounts => List.unmodifiable(_accounts);
+  List<BudgetPlan> get plans => List.unmodifiable(_plans);
   String get groupName => _activeGroup?.name ?? 'No Group';
   List<Person> get people => _activeGroup?.people ?? const [];
-  List<Transaction> get transactions => _activeGroup?.transactions ?? const [];
+  
+  List<GroupTransaction> get groupTransactions => _activeGroup?.groupTransactions ?? const [];
+  List<PersonalTransaction> get personalTransactions => List.unmodifiable(_personalTransactions);
+  
+  List<BaseTransaction> get allTransactions {
+    final all = <BaseTransaction>[...groupTransactions, ..._personalTransactions];
+    all.sort((a, b) => b.date.compareTo(a.date));
+    return all;
+  }
+
+  // Support legacy UI that expects 'transactions'
+  List<BaseTransaction> get transactions => allTransactions;
+
   bool get isSynced => _activeGroup?.syncId != null;
   String? get syncCode => _activeGroup?.syncId;
 
@@ -179,7 +205,29 @@ class AppState extends ChangeNotifier {
         _groups.add(defaultGroup);
         _activeGroupId = defaultGroup.id;
       }
+
+      final accountsJson = prefs.getString('accounts');
+      if (accountsJson != null) {
+        final List decode = jsonDecode(accountsJson);
+        _accounts.clear();
+        _accounts.addAll(decode.map((a) => Account.fromJson(Map<String, dynamic>.from(a))));
+      }
+
+      final plansJson = prefs.getString('plans');
+      if (plansJson != null) {
+        final List decode = jsonDecode(plansJson);
+        _plans.clear();
+        _plans.addAll(decode.map((p) => BudgetPlan.fromJson(Map<String, dynamic>.from(p))));
+      }
+
       _activeGroupId ??= prefs.getString('activeGroupId') ?? (_groups.isNotEmpty ? _groups.first.id : null);
+
+      final personalTxsJson = prefs.getString('personal_transactions');
+      if (personalTxsJson != null) {
+        final List decode = jsonDecode(personalTxsJson);
+        _personalTransactions.clear();
+        _personalTransactions.addAll(decode.map((t) => PersonalTransaction.fromJson(Map<String, dynamic>.from(t))));
+      }
 
       if (_activeGroupId != null) {
         _setupSync();
@@ -189,6 +237,7 @@ class AppState extends ChangeNotifier {
       log.error("AppState: Load state error", e, s);
     } finally {
       _isLoading = false;
+      _isInitialized = true;
       notifyListeners();
       await _autoClaimMe();
       _isInitializing = false;
@@ -196,10 +245,21 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _saveState() async {
+    if (!_isInitialized) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final groupsJson = jsonEncode(_groups.map((g) => g.toJson()).toList());
       await prefs.setString('groups_v2', groupsJson);
+      
+      final accountsJson = jsonEncode(_accounts.map((a) => a.toJson()).toList());
+      await prefs.setString('accounts', accountsJson);
+
+      final plansJson = jsonEncode(_plans.map((p) => p.toJson()).toList());
+      await prefs.setString('plans', plansJson);
+
+      final personalTxsJson = jsonEncode(_personalTransactions.map((t) => t.toJson()).toList());
+      await prefs.setString('personal_transactions', personalTxsJson);
+
       if (_activeGroupId != null) await prefs.setString('activeGroupId', _activeGroupId!);
 
       if (!_isInitializing) {
@@ -228,7 +288,7 @@ class AppState extends ChangeNotifier {
 
   void _setupSync() {
     _syncSubscription?.cancel();
-    _txSubscription?.cancel();
+    _groupTxSubscription?.cancel();
     final group = _activeGroup;
     if (group?.syncId != null) {
       final syncId = group!.syncId!;
@@ -239,28 +299,45 @@ class AppState extends ChangeNotifier {
           final remoteGroup = Group.fromJson(data);
           final idx = _groups.indexWhere((g) => g.id == group.id);
           if (idx != -1) {
-            _groups[idx] = remoteGroup.copyWith(transactions: _groups[idx].transactions);
+            _groups[idx] = remoteGroup.copyWith(groupTransactions: _groups[idx].groupTransactions);
             _cachedActiveGroup = _groups[idx];
-            _saveState(); // Persist remote metadata change locally
+            _saveState(); 
             notifyListeners();
           }
         }
       });
 
-      _txSubscription = _syncService.getTransactionsStream(syncId).listen((snap) {
-        final List<Transaction> remoteTxs = snap.docs
-            .map((d) => Transaction.fromJson(Map<String, dynamic>.from(d.data() as Map<String, dynamic>)))
+      _groupTxSubscription = _syncService.getGroupTransactionsStream(syncId).listen((snap) {
+        final List<GroupTransaction> remoteTxs = snap.docs
+            .map((d) => GroupTransaction.fromJson(Map<String, dynamic>.from(d.data() as Map<String, dynamic>)))
             .toList();
 
         final idx = _groups.indexWhere((g) => g.id == group.id);
         if (idx != -1) {
-          _groups[idx] = _groups[idx].copyWith(transactions: remoteTxs);
+          _groups[idx] = _groups[idx].copyWith(groupTransactions: remoteTxs);
           _cachedActiveGroup = _groups[idx];
-          _saveState(); // Persist remote transaction change locally
+          _saveState(); 
           notifyListeners();
         }
       });
     }
+    _setupPersonalTxSync();
+  }
+
+  void _setupPersonalTxSync() {
+    _personalTxSubscription?.cancel();
+    if (_currentUser == null) return;
+
+    _personalTxSubscription = _syncService.getPersonalTransactionsStream(_currentUser!.uid).listen((snap) {
+      final List<PersonalTransaction> remoteTxs = snap.docs
+          .map((d) => PersonalTransaction.fromJson(Map<String, dynamic>.from(d.data() as Map<String, dynamic>)))
+          .toList();
+
+      _personalTransactions.clear();
+      _personalTransactions.addAll(remoteTxs);
+      _saveState();
+      notifyListeners();
+    });
   }
 
   Future<void> enableSync() async {
@@ -345,9 +422,9 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> createGroup(String name) async {
+  Future<void> createGroup(String name, {GroupType type = GroupType.settlement}) async {
     if (name.isEmpty) return;
-    Group newGroup = Group(name: name);
+    Group newGroup = Group(name: name, type: type);
 
     if (isAuthenticated) {
       final syncId = await _syncService.enableSync(newGroup);
@@ -452,7 +529,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool isPersonInvolvedInTransactions(String id) {
-    return transactions.any((t) => t.payerId == id || t.participantIds.contains(id));
+    return groupTransactions.any((t) => t.payerId == id || t.participants.contains(id));
   }
 
   bool removePerson(String id) {
@@ -466,45 +543,111 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  Future<void> addTransaction(Transaction tx) async {
+  Future<void> addGroupTransaction(GroupTransaction tx) async {
     final group = _activeGroup;
     if (group == null) return;
-    _updateActiveGroup((g) => g.copyWith(transactions: [tx, ...g.transactions]));
-    if (group.syncId != null) await _syncService.pushTransaction(group.syncId!, tx);
+    _updateActiveGroup((g) => g.copyWith(groupTransactions: [tx, ...g.groupTransactions]));
+    if (group.syncId != null) await _syncService.pushGroupTransaction(group.syncId!, tx);
+    
+    // Adjust account balance
+    await _adjustAccountBalance(tx.sourceAccountId, tx.isPayment ? tx.amount : -tx.amount);
+    
     notifyListeners();
   }
 
-  Future<void> removeTransaction(String id) async {
-    final group = _activeGroup;
-    if (group == null) return;
-    _updateActiveGroup((g) => g.copyWith(transactions: g.transactions.where((t) => t.id != id).toList()));
-    if (group.syncId != null) await _syncService.deleteTransaction(group.syncId!, id);
+  Future<void> addPersonalTransaction(PersonalTransaction tx) async {
+    _personalTransactions.insert(0, tx);
+    if (_currentUser != null) await _syncService.pushPersonalTransaction(_currentUser!.uid, tx);
+    
+    // Adjust account balance
+    await _adjustAccountBalance(tx.sourceAccountId, tx.isPayment ? tx.amount : -tx.amount);
+    
+    await _saveState();
     notifyListeners();
   }
 
-  Future<void> editTransaction(String id, Transaction newTx) async {
-    _updateActiveGroup((g) {
-      final tIdx = g.transactions.indexWhere((t) => t.id == id);
-      if (tIdx == -1) return g;
-      
-      final oldTx = g.transactions[tIdx];
-      final isAmountChanged = oldTx.amount != newTx.amount;
-      
-      final updatedTxs = [...g.transactions];
-      updatedTxs[tIdx] = newTx.copyWith(
-        updatedAt: isAmountChanged ? DateTime.now() : oldTx.updatedAt,
-        amountChanged: isAmountChanged || oldTx.amountChanged,
-      );
-      return g.copyWith(transactions: updatedTxs);
-    });
-
+  Future<void> removeGroupTransaction(String id) async {
     final group = _activeGroup;
-    if (group?.syncId != null) {
-      // Find the updated transaction to push to cloud
-      final updatedTx = transactions.firstWhere((t) => t.id == id);
-      await _syncService.pushTransaction(group!.syncId!, updatedTx);
+    final txIdx = group?.groupTransactions.indexWhere((t) => t.id == id) ?? -1;
+    if (txIdx != -1) {
+      final tx = group!.groupTransactions[txIdx];
+      _updateActiveGroup((g) => g.copyWith(groupTransactions: g.groupTransactions.where((t) => t.id != id).toList()));
+      if (group.syncId != null) await _syncService.deleteGroupTransaction(group.syncId!, id);
+      
+      // Revert account balance shift
+      await _adjustAccountBalance(tx.sourceAccountId, tx.isPayment ? -tx.amount : tx.amount);
     }
     notifyListeners();
+  }
+
+  Future<void> removePersonalTransaction(String id) async {
+    final pIdx = _personalTransactions.indexWhere((t) => t.id == id);
+    if (pIdx != -1) {
+      final tx = _personalTransactions[pIdx];
+      _personalTransactions.removeAt(pIdx);
+      if (_currentUser != null) await _syncService.deletePersonalTransaction(_currentUser!.uid, id);
+      
+      // Revert account balance shift
+      await _adjustAccountBalance(tx.sourceAccountId, tx.isPayment ? -tx.amount : tx.amount);
+      
+      await _saveState();
+      notifyListeners();
+    }
+  }
+
+  Future<void> editGroupTransaction(String id, GroupTransaction newTx) async {
+    final group = _activeGroup;
+    final tIdx = group?.groupTransactions.indexWhere((t) => t.id == id) ?? -1;
+    if (tIdx == -1) return;
+    
+    final oldTx = group!.groupTransactions[tIdx];
+    
+    _updateActiveGroup((g) {
+      final updatedTxs = [...g.groupTransactions];
+      updatedTxs[tIdx] = newTx.copyWith(
+        updatedAt: (oldTx.amount != newTx.amount) ? DateTime.now() : oldTx.updatedAt,
+        amountChanged: (oldTx.amount != newTx.amount) || oldTx.amountChanged,
+      );
+      return g.copyWith(groupTransactions: updatedTxs);
+    });
+
+    if (group.syncId != null) {
+      final updatedTx = groupTransactions.firstWhere((t) => t.id == id);
+      await _syncService.pushGroupTransaction(group.syncId!, updatedTx);
+    }
+
+    // Adjust balance: Revert old, Apply new
+    await _adjustAccountBalance(oldTx.sourceAccountId, oldTx.isPayment ? -oldTx.amount : oldTx.amount);
+    await _adjustAccountBalance(newTx.sourceAccountId, newTx.isPayment ? newTx.amount : -newTx.amount);
+
+    notifyListeners();
+  }
+
+  Future<void> editPersonalTransaction(String id, PersonalTransaction newTx) async {
+    final tIdx = _personalTransactions.indexWhere((t) => t.id == id);
+    if (tIdx != -1) {
+      final oldTx = _personalTransactions[tIdx];
+      _personalTransactions[tIdx] = newTx.copyWith(updatedAt: DateTime.now());
+      if (_currentUser != null) await _syncService.pushPersonalTransaction(_currentUser!.uid, _personalTransactions[tIdx]);
+      
+      // Adjust balance: Revert old, Apply new
+      await _adjustAccountBalance(oldTx.sourceAccountId, oldTx.isPayment ? -oldTx.amount : oldTx.amount);
+      await _adjustAccountBalance(newTx.sourceAccountId, newTx.isPayment ? newTx.amount : -newTx.amount);
+
+      await _saveState();
+      notifyListeners();
+    }
+  }
+
+  Future<void> _adjustAccountBalance(String? accountId, double delta) async {
+    if (accountId == null || delta == 0) return;
+    final idx = _accounts.indexWhere((a) => a.id == accountId);
+    if (idx != -1) {
+      final updatedAccount = _accounts[idx].copyWith(
+        currentBalance: _accounts[idx].currentBalance + delta,
+      );
+      await updateAccount(updatedAccount);
+    }
   }
 
   Future<void> clearAll() async {
@@ -512,30 +655,118 @@ class AppState extends ChangeNotifier {
     if (syncId != null) await _syncService.purgeTransactions(syncId);
     final currentUserPerson = people.where((p) => p.userId == _currentUser?.uid).firstOrNull;
     final updatedPeople = currentUserPerson != null ? [currentUserPerson] : <Person>[];
-    _updateActiveGroup((g) => g.copyWith(transactions: [], people: updatedPeople));
+    _updateActiveGroup((g) => g.copyWith(groupTransactions: [], people: updatedPeople));
+    
+    _personalTransactions.clear();
+    if (_currentUser != null) {
+      // Purge cloud personal txs? For now just local
+    }
+    await _saveState();
     notifyListeners();
   }
 
   Future<void> clearExpenses() async {
     final group = _activeGroup;
     if (group?.syncId != null) await _syncService.purgeTransactions(group!.syncId!);
-    _updateActiveGroup((g) => g.copyWith(transactions: []));
+    _updateActiveGroup((g) => g.copyWith(groupTransactions: []));
     notifyListeners();
   }
 
-  // Financial Calculations
-  double get weeklyTotal {
+  // Account & Plan Management
+  Future<void> addAccount(Account account) async {
+    _accounts.add(account);
+    if (_currentUser != null) {
+      await _syncService.pushAccount(_currentUser!.uid, account);
+    }
+    await _saveState();
+    notifyListeners();
+  }
+
+  Future<void> removeAccount(String id) async {
+    _accounts.removeWhere((a) => a.id == id);
+    if (_currentUser != null) {
+      await _syncService.deleteAccount(_currentUser!.uid, id);
+    }
+    await _saveState();
+    notifyListeners();
+  }
+
+  Future<void> updateAccount(Account account) async {
+    final idx = _accounts.indexWhere((a) => a.id == account.id);
+    if (idx != -1) {
+      _accounts[idx] = account;
+      if (_currentUser != null) {
+        await _syncService.pushAccount(_currentUser!.uid, account);
+      }
+      await _saveState();
+      notifyListeners();
+    }
+  }
+
+  void _setupAccSync() {
+    _accSubscription?.cancel();
+    if (_currentUser == null) return;
+    
+    _accSubscription = _syncService.getAccountsStream(_currentUser!.uid).listen((snap) {
+      final cloudAccs = snap.docs.map((d) => Account.fromJson(Map<String, dynamic>.from(d.data() as Map))).toList();
+      
+      // Merge logic: simpler is to just replace for now if synced
+      if (cloudAccs.isNotEmpty) {
+        _accounts.clear();
+        _accounts.addAll(cloudAccs);
+        _saveState();
+        notifyListeners();
+      }
+    });
+  }
+
+  Future<void> addPlan(BudgetPlan plan) async {
+    _plans.add(plan);
+    await _saveState();
+    notifyListeners();
+  }
+
+  Future<void> removePlan(String id) async {
+    _plans.removeWhere((p) => p.id == id);
+    await _saveState();
+    notifyListeners();
+  }
+
+  Future<void> updatePlan(BudgetPlan plan) async {
+    final idx = _plans.indexWhere((p) => p.id == plan.id);
+    if (idx != -1) {
+      _plans[idx] = plan;
+      await _saveState();
+      notifyListeners();
+    }
+  }
+
+  double get totalNetWorth => _accounts.fold(0.0, (sum, a) => sum + a.currentBalance);
+
+  // Personal Statistics
+  double get weeklyPersonalTotal {
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    return transactions.where((t) => !t.isPayment && t.date.isAfter(weekAgo)).fold(0, (total, t) => total + t.amount);
+    return _personalTransactions.where((t) => !t.isPayment && t.date.isAfter(weekAgo)).fold(0.0, (total, t) => total + t.amount);
   }
 
-  double get monthlyTotal {
+  double get monthlyPersonalTotal {
     final now = DateTime.now();
-    return transactions.where((t) => !t.isPayment && t.date.month == now.month && t.date.year == now.year).fold(0, (total, t) => total + t.amount);
+    return _personalTransactions.where((t) => !t.isPayment && t.date.month == now.month && t.date.year == now.year).fold(0.0, (total, t) => total + t.amount);
   }
 
-  bool get hasSettlements => transactions.any((t) => t.isPayment || t.description.startsWith('Settle:'));
-  List<Settlement> get settlements => _cachedSettlements ??= DebtEngine.settleDebts(people, transactions);
+  // Group Statistics
+  double get weeklyGroupTotal {
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    return groupTransactions.where((t) => !t.isPayment && t.date.isAfter(weekAgo)).fold(0.0, (total, t) => total + t.amount);
+  }
+
+  double get monthlyGroupTotal {
+    final now = DateTime.now();
+    return groupTransactions.where((t) => !t.isPayment && t.date.month == now.month && t.date.year == now.year).fold(0.0, (total, t) => total + t.amount);
+  }
+
+  bool get hasSettlements => groupTransactions.any((t) => t.isPayment || t.description.startsWith('Settle:'));
+  List<Settlement> get settlements => _cachedSettlements ??= DebtEngine.settleDebts(people, groupTransactions);
   Map<String, double> get netBalances => _getFinancialMaps().net;
   Map<String, double> get paidBalances => _getFinancialMaps().paid;
   Map<String, double> get shareBalances => _getFinancialMaps().share;
@@ -547,18 +778,19 @@ class AppState extends ChangeNotifier {
     final netMap = <String, double>{for (var p in people) p.id: 0.0};
     final paidMap = <String, double>{for (var p in people) p.id: 0.0};
     final shareMap = <String, double>{for (var p in people) p.id: 0.0};
-    for (final tx in transactions) {
+    
+    for (final tx in groupTransactions) {
       paidMap[tx.payerId] = (paidMap[tx.payerId] ?? 0) + tx.amount;
       netMap[tx.payerId] = (netMap[tx.payerId] ?? 0) + tx.amount;
       if (tx.customAmounts != null) {
-        for (final pid in tx.participantIds) {
+        for (final pid in tx.participants) {
           final val = tx.customAmounts![pid] ?? 0;
           shareMap[pid] = (shareMap[pid] ?? 0) + val;
           netMap[pid] = (netMap[pid] ?? 0) - val;
         }
-      } else if (tx.participantIds.isNotEmpty) {
-        final share = tx.amount / tx.participantIds.length;
-        for (final pid in tx.participantIds) {
+      } else if (tx.participants.isNotEmpty) {
+        final share = tx.amount / tx.participants.length;
+        for (final pid in tx.participants) {
           shareMap[pid] = (shareMap[pid] ?? 0) + share;
           netMap[pid] = (netMap[pid] ?? 0) - share;
         }
@@ -573,13 +805,13 @@ class AppState extends ChangeNotifier {
   double getPersonNetBalance(String personId, {Group? inGroup}) {
     if (inGroup == null || inGroup.id == _activeGroupId) return netBalances[personId] ?? 0.0;
     double net = 0;
-    for (final tx in inGroup.transactions) {
+    for (final tx in inGroup.groupTransactions) {
       if (tx.payerId == personId) net += tx.amount;
-      if (tx.participantIds.contains(personId)) {
+      if (tx.participants.contains(personId)) {
         if (tx.customAmounts != null) {
           net -= (tx.customAmounts![personId] ?? 0);
         } else {
-          net -= (tx.amount / tx.participantIds.length);
+          net -= (tx.amount / tx.participants.length);
         }
       }
     }
@@ -588,19 +820,75 @@ class AppState extends ChangeNotifier {
 
   Map<Category, double> get categorySpend {
     final map = <Category, double>{};
-    for (final tx in transactions) {
+    for (final tx in allTransactions) {
       map[tx.category] = (map[tx.category] ?? 0) + tx.amount;
     }
     return map;
   }
 
-  void settleDebt(String fromId, String toId, double amount, {bool shouldClear = false}) {
+  void settleDebt(String fromId, String toId, double amount, {String? sourceAccountId, bool shouldClear = false}) {
     if (amount <= 0) return;
     final pFrom = people.firstWhere((p) => p.id == fromId);
     final pTo = people.firstWhere((p) => p.id == toId);
-    final tx = Transaction(description: "Settle: ${pFrom.name} ➔ ${pTo.name}", amount: amount, payerId: fromId, participantIds: [toId], isPayment: true);
+    final tx = GroupTransaction(
+      description: "Settle: ${pFrom.name} ➔ ${pTo.name}", 
+      amount: amount, 
+      payerId: fromId, 
+      participants: [toId], 
+      isPayment: true,
+      sourceAccountId: sourceAccountId,
+    );
     if (shouldClear) clearExpenses();
-    addTransaction(tx);
+    
+    // Add transaction
+    _updateActiveGroup((g) => g.copyWith(groupTransactions: [tx, ...g.groupTransactions]));
+    if (_activeGroup?.syncId != null) _syncService.pushGroupTransaction(_activeGroup!.syncId!, tx);
+    
+    // Adjust account balance (Inflow if receiving, outflow if paying)
+    if (sourceAccountId != null) {
+      final isReceiving = toId == me?.id;
+      _adjustAccountBalance(sourceAccountId, isReceiving ? amount : -amount);
+    }
+    
+    notifyListeners();
+  }
+
+  void linkGroupTransactionToWallet(String groupTxId, String accountId) {
+    if (me == null) return;
+    final group = _activeGroup;
+    if (group == null) return;
+
+    final txIdx = group.groupTransactions.indexWhere((t) => t.id == groupTxId);
+    if (txIdx == -1) return;
+
+    final originalTx = group.groupTransactions[txIdx];
+    final myUid = me!.id;
+
+    // Check if already linked
+    if (originalTx.participantBalances?.containsKey(myUid) ?? false) return;
+
+    final updatedBalances = Map<String, String>.from(originalTx.participantBalances ?? {});
+    updatedBalances[myUid] = accountId;
+
+    final updatedTx = originalTx.copyWith(participantBalances: updatedBalances);
+
+    // Update locally
+    final updatedTxs = [...group.groupTransactions];
+    updatedTxs[txIdx] = updatedTx;
+    _updateActiveGroup((g) => g.copyWith(groupTransactions: updatedTxs));
+
+    // Update cloud
+    if (group.syncId != null) {
+      _syncService.pushGroupTransaction(group.syncId!, updatedTx);
+    }
+
+    // Adjust balance for incoming payments
+    if (originalTx.isPayment && originalTx.participants.contains(myUid)) {
+      _adjustAccountBalance(accountId, originalTx.amount);
+    }
+    
+    _saveState();
+    notifyListeners();
   }
 
   Future<void> remindPerson(String personId, double amount) async {
@@ -611,7 +899,9 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _syncSubscription?.cancel();
-    _txSubscription?.cancel();
+    _groupTxSubscription?.cancel();
+    _personalTxSubscription?.cancel();
+    _accSubscription?.cancel();
     super.dispose();
   }
 }

@@ -8,20 +8,25 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 import 'state/app_state.dart';
-import 'ui/dashboard_screen.dart';
+import 'state/navigation_state.dart';
+import 'ui/main_tab_hub.dart';
 import 'ui/login_screen.dart';
 import 'services/notification_service.dart';
 
 import 'services/log_service.dart';
 
+import 'package:google_fonts/google_fonts.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('vi_VN', null);
+  await initializeDateFormatting('vi_VN');
 
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     await log.init(); // Initialize global error tracking
     await NotificationService().init();
     log.info("App started successfully with logging enabled");
@@ -30,8 +35,11 @@ void main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => TabNavigationState()),
+      ],
       child: const SettlementApp(),
     ),
   );
@@ -65,7 +73,7 @@ class SettlementApp extends StatelessWidget {
           seedColor: const Color(0xFF6366F1),
           brightness: Brightness.light,
         ),
-        fontFamily: 'Outfit',
+        textTheme: GoogleFonts.outfitTextTheme(),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -73,7 +81,7 @@ class SettlementApp extends StatelessWidget {
           seedColor: const Color(0xFF818CF8),
           brightness: Brightness.dark,
         ),
-        fontFamily: 'Outfit',
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       ),
 
       home: Consumer<AppState>(
@@ -84,7 +92,7 @@ class SettlementApp extends StatelessWidget {
           if (!state.isAuthenticated) {
             return const LoginScreen();
           }
-          return const DashboardScreen();
+          return const MainTabHub();
         }
       ),
       builder: (context, child) => GestureDetector(

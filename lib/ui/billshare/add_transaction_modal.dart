@@ -1,17 +1,16 @@
 import 'dart:ui';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../state/app_state.dart';
-import '../models.dart';
-import '../l10n/strings.dart';
-import 'ui_helpers.dart';
-import 'widgets/dashboard_widgets.dart';
+import '../../state/app_state.dart';
+import '../../models.dart';
+import '../../l10n/strings.dart';
+import '../ui_helpers.dart';
+import '../widgets/common_widgets.dart';
 
 class AddTransactionModal extends StatefulWidget {
-  final Transaction? initialTransaction;
+  final GroupTransaction? initialTransaction;
   const AddTransactionModal({super.key, this.initialTransaction});
 
   @override
@@ -25,8 +24,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   late DateTime _selectedDate;
 
   late String _payerId;
-  late Set<String> _participantIds;
+  late Set<String> _participants;
   late Category _category;
+  String? _sourceAccountId;
 
   bool _isCustomSplit = false;
   final Map<String, TextEditingController> _customControllers = {};
@@ -50,12 +50,14 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     _selectedDate = tx?.date ?? DateTime.now();
     _payerId =
         tx?.payerId ?? (state.people.isNotEmpty ? state.people.first.id : '');
-    _participantIds = tx != null
-        ? tx.participantIds.toSet()
+    _participants = tx != null
+        ? tx.participants.toSet()
         : state.people.map((p) => p.id).toSet();
 
     _category = tx?.category ?? Category.food;
     _isCustomSplit = tx?.customAmounts != null;
+    _sourceAccountId = tx?.sourceAccountId ??
+        (state.accounts.isNotEmpty ? state.accounts.first.id : null);
 
     for (var person in state.people) {
       double val = 0;
@@ -85,7 +87,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
   double get _assignedSum {
     double sum = 0;
-    for (var pid in _participantIds) {
+    for (var pid in _participants) {
       final val = double.tryParse(
               _customControllers[pid]!.text.replaceAll(RegExp(r'\D'), '')) ??
           0;
@@ -95,6 +97,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   }
 
   Future<void> _pickDateTime() async {
+    if (!mounted) return;
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -103,12 +106,14 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     );
     if (date == null) return;
 
+    if (!mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_selectedDate),
     );
     if (time == null) return;
 
+    if (!mounted) return;
     setState(() {
       _selectedDate =
           DateTime(date.year, date.month, date.day, time.hour, time.minute);
@@ -153,32 +158,15 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
               child: Stack(
                 children: [
-                  // Premium Ambient Glow Blobs
                   Positioned(
                     top: -100,
                     right: -100,
                     child: AmbientGlow(
-                      color: cs.primary,
-                      size: 250,
-                      opacity: 0.12,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -50,
-                    left: -50,
-                    child: AmbientGlow(
-                      color: const Color(0xFF7B61FF),
-                      size: 200,
-                      opacity: 0.1,
-                    ),
+                        color: cs.primary, size: 250, opacity: 0.12),
                   ),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      12,
-                      16,
-                      MediaQuery.of(context).viewInsets.bottom + 16,
-                    ),
+                    padding: EdgeInsets.fromLTRB(16, 12, 16,
+                        MediaQuery.of(context).viewInsets.bottom + 16),
                     child: Form(
                       key: _formKey,
                       child: SingleChildScrollView(
@@ -193,17 +181,23 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                                 height: 4,
                                 margin: const EdgeInsets.only(bottom: 16),
                                 decoration: BoxDecoration(
-                                    color: isDark ? Colors.white24 : Colors.black12,
+                                    color: isDark
+                                        ? Colors.white24
+                                        : Colors.black12,
                                     borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
                             Text(
-                              _isEditing ? s.editExpenseTitle : s.addExpenseTitle,
+                              _isEditing
+                                  ? s.editExpenseTitle
+                                  : s.addExpenseTitle,
                               style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                                  fontFamily: 'Outfit'),
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1A1A2E),
+                              ),
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
@@ -212,24 +206,27 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                               icon: Icons.edit_rounded,
                               isDark: isDark,
                               cs: cs,
-                              height: 70,
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) return s.enterDescription;
-                                return null;
-                              },
+                              height: 60,
+                              validator: (val) =>
+                                  (val == null || val.trim().isEmpty)
+                                      ? s.enterDescription
+                                      : null,
                             ),
                             const SizedBox(height: 12),
                             _buildMainAmountField(isDark: isDark, cs: cs, s: s),
                             const SizedBox(height: 12),
                             _buildDateTimeButton(isDark: isDark, cs: cs, s: s),
                             const SizedBox(height: 16),
-                            _headerLabel(s.whoPays, Icons.person_rounded, cs, isDark),
+                            _headerLabel(
+                                s.whoPays, Icons.person_rounded, cs, isDark),
                             const SizedBox(height: 8),
                             _buildPayerPicker(state, isDark, cs),
                             const SizedBox(height: 16),
-                            _headerLabel(s.category, Icons.grid_view_rounded, cs, isDark),
+                            _headerLabel(s.category, Icons.grid_view_rounded,
+                                cs, isDark),
                             const SizedBox(height: 8),
                             _buildCategoryPicker(s, isDark, cs),
+                            const SizedBox(height: 16),
                             const SizedBox(height: 20),
                             _buildSplitSection(s, isDark, cs, state, fmt),
                             const SizedBox(height: 24),
@@ -249,6 +246,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     );
   }
 
+
   Widget _headerLabel(String text, IconData icon, ColorScheme cs, bool isDark) {
     return Row(
       children: [
@@ -256,10 +254,10 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         const SizedBox(width: 6),
         Text(text,
             style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white60 : Colors.black54,
-                fontFamily: 'Outfit')),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white60 : Colors.black54,
+            )),
       ],
     );
   }
@@ -270,7 +268,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.03)
+            : Colors.black.withValues(alpha: 0.02),
         border:
             Border.all(color: cs.primary.withValues(alpha: 0.1), width: 1.5),
       ),
@@ -280,23 +280,15 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         inputFormatters: [CurrencyInputFormatter()],
         textAlign: TextAlign.center,
         style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-            color: cs.primary,
-            fontFamily: 'Outfit',
-            letterSpacing: -0.5),
-        decoration: InputDecoration(
-          hintText: s.amountHint,
-          border: InputBorder.none,
-          prefixIcon: Icon(Icons.bolt_rounded, color: cs.primary, size: 20),
-          hintStyle:
-              TextStyle(color: cs.primary.withValues(alpha: 0.2), fontSize: 22),
+          fontSize: 28,
+          fontWeight: FontWeight.w900,
+          color: cs.primary,
         ),
-        validator: (val) {
-          final amt = _totalInputAmount;
-          if (amt <= 0) return s.enterAmount;
-          return null;
-        },
+        decoration: InputDecoration(
+            hintText: s.amountHint,
+            border: InputBorder.none,
+            prefixIcon: Icon(Icons.bolt_rounded, color: cs.primary, size: 20)),
+        validator: (val) => _totalInputAmount <= 0 ? s.enterAmount : null,
       ),
     );
   }
@@ -309,11 +301,10 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.03)
-              : Colors.black.withValues(alpha: 0.02),
-        ),
+            borderRadius: BorderRadius.circular(16),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.02)),
         child: Row(
           children: [
             Icon(Icons.calendar_month_rounded, size: 16, color: cs.primary),
@@ -324,11 +315,11 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                     fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white60 : Colors.black54)),
             const Spacer(),
-            Text(
-              DateFormat('dd/MM, HH:mm').format(_selectedDate),
-              style: TextStyle(
-                  fontWeight: FontWeight.w800, color: cs.primary, fontSize: 14),
-            ),
+            Text(DateFormat('dd/MM, HH:mm').format(_selectedDate),
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: cs.primary,
+                    fontSize: 14)),
           ],
         ),
       ),
@@ -340,7 +331,6 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
         itemCount: state.people.length,
         itemBuilder: (context, index) {
           final person = state.people[index];
@@ -350,21 +340,14 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             child: ChoiceChip(
               label: Text(person.name),
               selected: isSelected,
-              onSelected: (selected) {
-                if (selected) setState(() => _payerId = person.id);
-              },
-              showCheckmark: false,
+              onSelected: (selected) =>
+                  selected ? setState(() => _payerId = person.id) : null,
               selectedColor: cs.primary,
-              backgroundColor: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.03),
               labelStyle: TextStyle(
                   color: isSelected
                       ? Colors.white
                       : (isDark ? Colors.white60 : Colors.black54),
-                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                   fontSize: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide.none),
@@ -380,7 +363,6 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       height: 38,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
         itemCount: Category.values.length,
         itemBuilder: (context, index) {
           final cat = Category.values[index];
@@ -394,18 +376,12 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               label: Text(s.getCategoryName(cat)),
               selected: isSelected,
               onSelected: (selected) => setState(() => _category = cat),
-              showCheckmark: false,
               selectedColor: color,
-              backgroundColor: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.03),
               labelStyle: TextStyle(
                   color: isSelected
                       ? Colors.white
                       : (isDark ? Colors.white60 : Colors.black54),
-                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                   fontSize: 11),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide.none),
@@ -415,6 +391,8 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       ),
     );
   }
+
+  /* Account and Plan pickers removed for cleaner UI in BillShare */
 
   Widget _buildSplitSection(AppStrings s, bool isDark, ColorScheme cs,
       AppState state, NumberFormat fmt) {
@@ -431,7 +409,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         const SizedBox(height: 12),
         if (_isCustomSplit) _buildBalanceIndicator(s, isDark, cs, fmt),
         const SizedBox(height: 8),
-        ...state.people.map((p) => _buildSplitRow(p, isDark, cs, s)).toList(),
+        ...state.people.map((p) => _buildSplitRow(p, isDark, cs, s)),
       ],
     );
   }
@@ -440,11 +418,10 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(12),
-      ),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -465,9 +442,8 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? cs.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
+            color: active ? cs.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(10)),
         child: Text(label,
             style: TextStyle(
                 fontSize: 11,
@@ -485,15 +461,13 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     final isMatch = diff.abs() < 1;
     final statusColor =
         isMatch ? Colors.green : (diff > 0 ? cs.primary : Colors.red);
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withValues(alpha: 0.2)),
-      ),
+          color: statusColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: statusColor.withValues(alpha: 0.2))),
       child: Row(
         children: [
           Icon(
@@ -504,19 +478,17 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               color: statusColor),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              isMatch
-                  ? s.done
-                  : (diff > 0
-                      ? '${s.remainingBalance}: ${fmt.format(diff)} ₫'
-                      : '${s.amountMismatch}: ${fmt.format(diff.abs())} ₫'),
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: statusColor),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+              child: Text(
+                  isMatch
+                      ? s.done
+                      : (diff > 0
+                          ? '${s.remainingBalance}: ${fmt.format(diff)} ₫'
+                          : '${s.amountMismatch}: ${fmt.format(diff.abs())} ₫'),
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: statusColor),
+                  overflow: TextOverflow.ellipsis)),
           const SizedBox(width: 8),
           Text('${fmt.format(_assignedSum)} / ${fmt.format(_totalInputAmount)}',
               style: TextStyle(
@@ -529,9 +501,8 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   }
 
   Widget _buildSplitRow(Person p, bool isDark, ColorScheme cs, AppStrings s) {
-    final isIncluded = _participantIds.contains(p.id);
+    final isIncluded = _participants.contains(p.id);
     final avatarColor = UIHelpers.getAvatarColor(p.colorIndex);
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.only(bottom: 6),
@@ -543,10 +514,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                 : Colors.black.withValues(alpha: 0.02)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isIncluded
-              ? cs.primary.withValues(alpha: 0.3)
-              : Colors.transparent,
-        ),
+            color: isIncluded
+                ? cs.primary.withValues(alpha: 0.3)
+                : Colors.transparent),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -555,9 +525,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             GestureDetector(
               onTap: () => setState(() {
                 if (isIncluded) {
-                  if (_participantIds.length > 1) _participantIds.remove(p.id);
+                  if (_participants.length > 1) _participants.remove(p.id);
                 } else {
-                  _participantIds.add(p.id);
+                  _participants.add(p.id);
                 }
               }),
               child: Stack(
@@ -572,32 +542,16 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                             color: isIncluded
                                 ? avatarColor
                                 : Colors.grey.withValues(alpha: 0.2),
-                            width: 1.5),
-                        image: p.avatarUrl.isNotEmpty
-                            ? (p.avatarUrl.startsWith('http')
-                                ? DecorationImage(
-                                    image: NetworkImage(p.avatarUrl),
-                                    fit: BoxFit.cover)
-                                : (File(p.avatarUrl).existsSync()
-                                    ? DecorationImage(
-                                        image: FileImage(File(p.avatarUrl)),
-                                        fit: BoxFit.cover)
-                                    : null))
-                            : null),
-                    child: p.avatarUrl.isEmpty ||
-                            (!p.avatarUrl.startsWith('http') &&
-                                !File(p.avatarUrl).existsSync())
-                        ? CircleAvatar(
-                            backgroundColor: avatarColor.withValues(
-                                alpha: isIncluded ? 0.2 : 0.05),
-                            child: Text(p.name[0].toUpperCase(),
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color:
-                                        isIncluded ? avatarColor : Colors.grey,
-                                    fontWeight: FontWeight.w900)),
-                          )
-                        : null,
+                            width: 1.5)),
+                    child: CircleAvatar(
+                      backgroundColor: avatarColor.withValues(
+                          alpha: isIncluded ? 0.2 : 0.05),
+                      child: Text(p.name[0].toUpperCase(),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: isIncluded ? avatarColor : Colors.grey,
+                              fontWeight: FontWeight.w900)),
+                    ),
                   ),
                   if (isIncluded)
                     Positioned(
@@ -614,15 +568,14 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(p.name,
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight:
-                          isIncluded ? FontWeight.w900 : FontWeight.w600,
-                      color: isIncluded
-                          ? (isDark ? Colors.white : Colors.black87)
-                          : Colors.grey)),
-            ),
+                child: Text(p.name,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            isIncluded ? FontWeight.w900 : FontWeight.w600,
+                        color: isIncluded
+                            ? (isDark ? Colors.white : Colors.black87)
+                            : Colors.grey))),
             if (_isCustomSplit && isIncluded)
               Container(
                 width: 100,
@@ -634,23 +587,23 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                     border:
                         Border.all(color: cs.primary.withValues(alpha: 0.15))),
                 child: TextFormField(
-                  controller: _customControllers[p.id],
+                  controller: _customControllers[p.id] ??=
+                      TextEditingController(text: '0'),
                   keyboardType: TextInputType.number,
                   inputFormatters: [CurrencyInputFormatter()],
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: cs.primary,
-                      fontFamily: 'Outfit'),
-                  decoration: const InputDecoration(
-                    suffixText: ' ₫',
-                    suffixStyle:
-                        TextStyle(fontSize: 9, fontWeight: FontWeight.normal),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: cs.primary,
                   ),
+                  decoration: const InputDecoration(
+                      suffixText: ' ₫',
+                      suffixStyle:
+                          TextStyle(fontSize: 9, fontWeight: FontWeight.normal),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero),
                 ),
               ),
           ],
@@ -662,22 +615,20 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   Widget _buildConfirmButton(ColorScheme cs, AppStrings s, AppState state) {
     final isUnbalanced =
         _isCustomSplit && (_totalInputAmount - _assignedSum).abs() >= 1;
-
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 54,
       child: FilledButton(
         onPressed: isUnbalanced ? null : () => _submitTransaction(state),
         style: FilledButton.styleFrom(
-          backgroundColor: isUnbalanced ? Colors.grey : cs.primary,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        ),
+            backgroundColor: isUnbalanced ? Colors.grey : cs.primary,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20))),
         child: Text(_isEditing ? s.save : s.done,
             style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                fontFamily: 'Outfit')),
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            )),
       ),
     );
   }
@@ -687,7 +638,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       Map<String, double>? customAmounts;
       if (_isCustomSplit) {
         customAmounts = {};
-        for (var pid in _participantIds) {
+        for (var pid in _participants) {
           final pVal = double.tryParse(_customControllers[pid]!
                   .text
                   .replaceAll(RegExp(r'\D'), '')) ??
@@ -696,36 +647,72 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         }
       }
 
-      final newTx = Transaction(
+      final newTx = GroupTransaction(
         id: widget.initialTransaction?.id,
         description: _descriptionController.text,
         amount: _totalInputAmount,
         payerId: _payerId,
-        participantIds: _participantIds.toList(),
+        participants: _participants.toList(),
         date: _selectedDate,
         category: _category,
         isPayment: widget.initialTransaction?.isPayment ?? false,
         customAmounts: customAmounts,
+        sourceAccountId: (_payerId == (state.me?.id ?? '')) ? _sourceAccountId : null,
       );
 
-      if (_isEditing) {
-        state.editTransaction(widget.initialTransaction!.id, newTx);
-      } else {
-        state.addTransaction(newTx);
+      // Check balance if current user is the payer
+      if (_payerId == (state.me?.id ?? '') && _sourceAccountId != null) {
+        final acc = state.accounts.firstWhere((a) => a.id == _sourceAccountId, orElse: () => state.accounts.first);
+        if (_totalInputAmount > acc.currentBalance) {
+          _showBalanceWarning(context, state, newTx, acc.name);
+          return;
+        }
       }
-      Navigator.pop(context);
+
+      _finalizeSubmit(state, newTx);
     }
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    required bool isDark,
-    required ColorScheme cs,
-    required double height,
-    String? Function(String?)? validator,
-  }) {
+  void _finalizeSubmit(AppState state, GroupTransaction tx) {
+    if (_isEditing) {
+      state.editGroupTransaction(widget.initialTransaction!.id, tx);
+    } else {
+      state.addGroupTransaction(tx);
+    }
+    Navigator.pop(context);
+  }
+
+  void _showBalanceWarning(BuildContext context, AppState state, GroupTransaction tx, String accName) {
+    final s = AppStrings.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(s.insufficientBalance, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text("${s.insufficientBalanceMsg} '$accName'. ${s.continueAnyway}", style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.cancel.toUpperCase(), style: const TextStyle(color: Colors.white38))),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _finalizeSubmit(state, tx);
+            }, 
+            child: Text(s.proceed.toUpperCase(), style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold))
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      {required TextEditingController controller,
+      required String hint,
+      required IconData icon,
+      required bool isDark,
+      required ColorScheme cs,
+      required double height,
+      String? Function(String?)? validator}) {
     return Container(
       constraints: BoxConstraints(minHeight: height),
       child: TextFormField(
@@ -768,8 +755,7 @@ class CurrencyInputFormatter extends TextInputFormatter {
     final number = int.parse(cleaned);
     final formatted = NumberFormat('#,###', 'en_US').format(number);
     return newValue.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length));
   }
 }

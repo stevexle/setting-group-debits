@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../l10n/strings.dart';
-import 'widgets/dashboard/common_widgets.dart';
+import 'widgets/common_widgets.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -59,8 +59,8 @@ class LoginScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 42,
                           fontWeight: FontWeight.w900,
-                          fontFamily: 'Outfit',
-                          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                          color:
+                              isDark ? Colors.white : const Color(0xFF1A1A2E),
                           letterSpacing: -1,
                         ),
                       ),
@@ -98,7 +98,8 @@ class _GoogleSignInButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool isDark;
   final String label;
-  const _GoogleSignInButton({required this.onTap, required this.isDark, required this.label});
+  const _GoogleSignInButton(
+      {required this.onTap, required this.isDark, required this.label});
 
   @override
   Widget build(BuildContext context) {

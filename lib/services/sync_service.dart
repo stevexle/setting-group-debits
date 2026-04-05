@@ -20,28 +20,46 @@ class SyncService {
     }
   }
 
-  /// Pushes a single transaction to the 'transactions' subcollection.
-  Future<void> pushTransaction(String syncId, Transaction tx) async {
+  /// Pushes a single group transaction.
+  Future<void> pushGroupTransaction(String syncId, GroupTransaction tx) async {
     try {
       final batch = _firestore.batch();
       final groupRef = _firestore.collection('groups').doc(syncId);
-      final txRef = groupRef.collection('transactions').doc(tx.id);
+      final txRef = groupRef.collection('group_transactions').doc(tx.id);
 
       batch.set(txRef, tx.toJson());
       batch.update(groupRef, {'lastUpdate': FieldValue.serverTimestamp()});
       
       await batch.commit();
     } catch (e, s) {
-      log.error("Firebase: pushTransaction error", e, s);
+      log.error("Firebase: pushGroupTransaction error", e, s);
     }
   }
 
-  /// Deletes a single transaction from the subcollection.
-  Future<void> deleteTransaction(String syncId, String txId) async {
+  /// Pushes a single personal transaction.
+  Future<void> pushPersonalTransaction(String uid, PersonalTransaction tx) async {
     try {
-      await _firestore.collection('groups').doc(syncId).collection('transactions').doc(txId).delete();
+      await _firestore.collection('users').doc(uid).collection('personal_transactions').doc(tx.id).set(tx.toJson());
     } catch (e, s) {
-      log.error("Firebase: deleteTransaction error", e, s);
+      log.error("Firebase: pushPersonalTransaction error", e, s);
+    }
+  }
+
+  /// Deletes a group transaction.
+  Future<void> deleteGroupTransaction(String syncId, String txId) async {
+    try {
+      await _firestore.collection('groups').doc(syncId).collection('group_transactions').doc(txId).delete();
+    } catch (e, s) {
+      log.error("Firebase: deleteGroupTransaction error", e, s);
+    }
+  }
+
+  /// Deletes a personal transaction.
+  Future<void> deletePersonalTransaction(String uid, String txId) async {
+    try {
+      await _firestore.collection('users').doc(uid).collection('personal_transactions').doc(txId).delete();
+    } catch (e, s) {
+      log.error("Firebase: deletePersonalTransaction error", e, s);
     }
   }
 
@@ -54,7 +72,7 @@ class SyncService {
       await groupRef.update({'transactions': FieldValue.delete()});
 
       // 2. Delete all docs in subcollection using partition logic (batch)
-      final snap = await groupRef.collection('transactions').get();
+      final snap = await groupRef.collection('group_transactions').get();
       if (snap.docs.isNotEmpty) {
         final batch = _firestore.batch();
         for (var doc in snap.docs) {
@@ -71,7 +89,7 @@ class SyncService {
   Future<void> deleteCloudGroup(String syncId) async {
     try {
       final groupRef = _firestore.collection('groups').doc(syncId);
-      final txSnap = await groupRef.collection('transactions').get();
+      final txSnap = await groupRef.collection('group_transactions').get();
       
       final batch = _firestore.batch();
       for (var d in txSnap.docs) {
@@ -110,8 +128,8 @@ class SyncService {
       final doc = await _firestore.collection('groups').doc(inviteCode).get();
       if (doc.exists) {
         final data = Map<String, dynamic>.from(doc.data()!);
-        final txSnap = await _firestore.collection('groups').doc(inviteCode).collection('transactions').get();
-        data['transactions'] = txSnap.docs.map((d) => d.data()).toList();
+        final txSnap = await _firestore.collection('groups').doc(inviteCode).collection('group_transactions').get();
+        data['groupTransactions'] = txSnap.docs.map((d) => d.data()).toList();
         return Group.fromJson(data);
       }
     } catch (e, s) {
@@ -132,8 +150,8 @@ class SyncService {
       await docRef.update({'syncId': syncId});
       
       // Push existing transactions
-      for (final tx in group.transactions) {
-        await pushTransaction(syncId, tx);
+      for (final tx in group.groupTransactions) {
+        await pushGroupTransaction(syncId, tx);
       }
       return syncId;
     } catch (e, s) {
@@ -144,8 +162,12 @@ class SyncService {
 
   /// Streams for real-time synchronization.
   Stream<DocumentSnapshot> getSyncStream(String syncId) => _firestore.collection('groups').doc(syncId).snapshots();
-  Stream<QuerySnapshot> getTransactionsStream(String syncId) => 
-      _firestore.collection('groups').doc(syncId).collection('transactions').orderBy('date', descending: true).snapshots();
+  
+  Stream<QuerySnapshot> getGroupTransactionsStream(String syncId) => 
+      _firestore.collection('groups').doc(syncId).collection('group_transactions').orderBy('date', descending: true).snapshots();
+
+  Stream<QuerySnapshot> getPersonalTransactionsStream(String uid) =>
+      _firestore.collection('users').doc(uid).collection('personal_transactions').orderBy('date', descending: true).snapshots();
 
   /// Fetches all groups where the user is a member.
   Future<List<Group>> fetchGroupsForUser(String uid) async {
@@ -153,7 +175,7 @@ class SyncService {
       final snapshot = await _firestore.collection('groups').where('memberUids', arrayContains: uid).get();
       return snapshot.docs.map((doc) {
         final data = Map<String, dynamic>.from(doc.data());
-        data['transactions'] = []; // Transactions are handled via subcollections/streams
+        data['groupTransactions'] = []; // Transactions are handled via subcollections/streams
         return Group.fromJson(data);
       }).toList();
     } catch (e, s) {
@@ -161,4 +183,25 @@ class SyncService {
       return [];
     }
   }
+
+  // --- Account Sync (User Specific) ---
+
+  Future<void> pushAccount(String uid, Account acc) async {
+    try {
+      await _firestore.collection('users').doc(uid).collection('accounts').doc(acc.id).set(acc.toJson());
+    } catch (e, s) {
+      log.error("Firebase: pushAccount error", e, s);
+    }
+  }
+
+  Future<void> deleteAccount(String uid, String accId) async {
+    try {
+      await _firestore.collection('users').doc(uid).collection('accounts').doc(accId).delete();
+    } catch (e, s) {
+      log.error("Firebase: deleteAccount error", e, s);
+    }
+  }
+
+  Stream<QuerySnapshot> getAccountsStream(String uid) =>
+      _firestore.collection('users').doc(uid).collection('accounts').snapshots();
 }

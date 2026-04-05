@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../state/app_state.dart';
-import '../models.dart';
-import '../l10n/strings.dart';
-import 'ui_helpers.dart';
-import 'widgets/dashboard_widgets.dart';
-import '../services/log_service.dart';
+import '../../state/app_state.dart';
+import '../../models.dart';
+import '../../l10n/strings.dart';
+import '../ui_helpers.dart';
+import '../widgets/common_widgets.dart';
+import '../../services/log_service.dart';
 
 class SettlementScreen extends StatelessWidget {
   const SettlementScreen({super.key});
@@ -42,8 +42,8 @@ class SettlementScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final s = AppStrings.of(context);
     final settlements = state.settlements;
-    final currencyFormat = NumberFormat.simpleCurrency(
-        locale: 'vi_VN', name: '₫', decimalDigits: 0);
+    final currencyFormat =
+        NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -82,7 +82,6 @@ class SettlementScreen extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      fontFamily: 'Outfit',
                     ),
                   ),
                 ),
@@ -130,9 +129,14 @@ class SettlementScreen extends StatelessWidget {
                                   amount: set.amount,
                                   currencyFormat: currencyFormat,
                                   onSettle: () {
-                                    state.settleDebt(
-                                        set.fromId, set.toId, set.amount,
-                                        shouldClear: false);
+                                    final involvement = (set.fromId == (state.me?.id ?? '') || set.toId == (state.me?.id ?? ''));
+                                    if (involvement && state.accounts.isNotEmpty) {
+                                      _showAccountPicker(context, state, set);
+                                    } else {
+                                      state.settleDebt(
+                                          set.fromId, set.toId, set.amount,
+                                          shouldClear: false);
+                                    }
                                   },
                                   s: s,
                                   isDark: isDark,
@@ -188,6 +192,16 @@ class SettlementScreen extends StatelessWidget {
                   color: Color(0xFF7B61FF))),
         ],
       ),
+    );
+  }
+
+  void _showAccountPicker(BuildContext context, AppState state, Settlement set) {
+    UIHelpers.showAccountPicker(
+      context: context,
+      state: state,
+      onSelected: (acc) {
+        state.settleDebt(set.fromId, set.toId, set.amount, sourceAccountId: acc.id);
+      },
     );
   }
 
@@ -295,10 +309,10 @@ class _SettlementCard extends StatelessWidget {
           const SizedBox(width: 6),
           Text(currencyFormat.format(amount),
               style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontFamily: 'Outfit')),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : Colors.black87,
+              )),
         ],
       ),
     );
@@ -318,9 +332,9 @@ class _SettlementCard extends StatelessWidget {
             ),
             child: Text(s.settleNow,
                 style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'Outfit')),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                )),
           ),
         ),
         const SizedBox(width: 8),
@@ -416,10 +430,10 @@ class _Avatar extends StatelessWidget {
         const SizedBox(height: 4),
         Text(person.name,
             style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: isDark ? Colors.white70 : Colors.black87,
-                fontFamily: 'Outfit')),
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white70 : Colors.black87,
+            )),
       ],
     );
   }

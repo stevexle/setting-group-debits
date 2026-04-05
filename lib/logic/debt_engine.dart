@@ -2,7 +2,7 @@ import '../models.dart';
 
 class DebtEngine {
   /// Calculates the optimal settlements to minimize transactions.
-  static List<Settlement> settleDebts(List<Person> people, List<Transaction> transactions) {
+  static List<Settlement> settleDebts(List<Person> people, List<GroupTransaction> transactions) {
     if (people.isEmpty) return [];
 
     // Map to store net balance of each person
@@ -13,7 +13,7 @@ class DebtEngine {
 
     // Calculate net balances
     for (var tx in transactions) {
-      if (tx.participantIds.isEmpty) continue;
+      if (tx.participants.isEmpty) continue;
 
       // Only include people that still exist in the project
       if (netBalances.containsKey(tx.payerId)) {
@@ -22,15 +22,15 @@ class DebtEngine {
 
       // Handle split or custom amounts
       if (tx.customAmounts != null) {
-        for (final participantId in tx.participantIds) {
+        for (final participantId in tx.participants) {
           if (netBalances.containsKey(participantId)) {
             final amt = tx.customAmounts![participantId] ?? 0.0;
             netBalances[participantId] = netBalances[participantId]! - amt;
           }
         }
       } else {
-        final splitAmount = tx.amount / tx.participantIds.length;
-        for (final participantId in tx.participantIds) {
+        final splitAmount = tx.amount / tx.participants.length;
+        for (final participantId in tx.participants) {
           if (netBalances.containsKey(participantId)) {
             netBalances[participantId] = netBalances[participantId]! - splitAmount;
           }

@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
@@ -35,19 +36,31 @@ class LogService {
     }
   }
 
+  bool get _isFirebaseReady {
+    try {
+      Firebase.app();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void info(String message) {
     if (kDebugMode) {
       _logger.i(message);
     }
-    // Also log as breadcrumb in Crashlytics if in release
-    FirebaseCrashlytics.instance.log(message);
+    if (_isFirebaseReady) {
+      FirebaseCrashlytics.instance.log(message);
+    }
   }
 
   void warning(String message) {
     if (kDebugMode) {
       _logger.w(message);
     }
-    FirebaseCrashlytics.instance.log("WARNING: $message");
+    if (_isFirebaseReady) {
+      FirebaseCrashlytics.instance.log("WARNING: $message");
+    }
   }
 
   void error(dynamic message, [dynamic error, StackTrace? stackTrace]) {
@@ -55,12 +68,13 @@ class LogService {
       _logger.e(message, error: error, stackTrace: stackTrace);
     }
     
-    // Record to crashlytics
-    FirebaseCrashlytics.instance.recordError(
-      error ?? message,
-      stackTrace,
-      reason: message.toString(),
-    );
+    if (_isFirebaseReady) {
+      FirebaseCrashlytics.instance.recordError(
+        error ?? message,
+        stackTrace,
+        reason: message.toString(),
+      );
+    }
   }
 
   void debug(String message) {

@@ -16,6 +16,7 @@ class AppStrings {
     tabPay: 'Chi tiêu',
     settlement: 'Quyết toán',
     addExpense: 'Thêm chi tiêu',
+    addTransaction: 'Thêm giao dịch',
     today: 'Hôm nay',
     yesterday: 'Hôm qua',
     deleteAll: 'Xóa tất cả',
@@ -42,6 +43,7 @@ class AppStrings {
     enterName: 'Nhập tên...',
     addMemberTitle: 'Thêm Thành Viên',
     addExpenseTitle: 'Thêm Chi Tiêu Mới',
+    addTransactionTitle: 'Thêm Giao Dịch Mới',
     editExpenseTitle: 'Sửa Chi Tiêu',
     deleteExpense: 'Xóa chi tiêu?',
     deleteExpenseMsg: 'Bạn có chắc chắn muốn xóa chi tiêu này?',
@@ -60,6 +62,8 @@ class AppStrings {
     monthlyTotalLabel: 'Tháng này',
     thisWeek: 'Tuần này',
     thisMonth: 'Tháng này',
+    weeklyTotal: 'Tổng tuần',
+    monthlyTotal: 'Tổng tháng',
     enterDescription: 'Vui lòng nhập nội dung',
     enterAmount: 'Vui lòng nhập số tiền',
     invalidAmount: 'Số tiền không hợp lệ',
@@ -94,6 +98,8 @@ class AppStrings {
     totalMismatch: 'Tổng tiền không khớp!',
     remainingBalance: 'Còn lại',
     amountMismatch: 'Chênh lệch',
+    recordToWallet: 'Hạch toán vào ví của tôi',
+    recordedTo: 'Đã hạch toán vào: ',
     edited: 'ĐÃ SỬA',
     editedAt: 'Sửa lúc',
     logout: 'Đăng xuất',
@@ -129,6 +135,57 @@ class AppStrings {
     deleteGroupConfirmMsg: 'Bạn có chắc chắn muốn xóa nhóm "{name}"? Hành động này không thể hoàn tác.',
     remindedUser: 'Đã nhắc nhở {name}',
     cannotDeleteSelf: 'Bạn không thể tự xóa chính mình khỏi nhóm.',
+    walletTitle: 'Ví của tôi',
+    accountsLabel: 'Tài khoản & Ví',
+    planningTitle: 'Lập kế hoạch',
+    addAccount: 'Thêm tài khoản',
+    addPlan: 'Tạo kế hoạch',
+    totalNetWorth: 'Tổng tài sản',
+    totalNetWorthLabel: 'TỔNG TÀI SẢN RÒNG',
+    addAccountTitle: 'Thêm Tài Khoản Mới',
+    accountNameHint: 'Tên tài khoản (vD: VCB, MoMo, Tiền mặt)',
+    initialBalanceHint: 'Số dư hiện tại (₫)',
+    accountTypeLabel: 'LOẠI TÀI KHOẢN',
+    saveAccount: 'Lưu Tài Khoản',
+    historyLabel: 'BIẾN ĐỘNG SỐ DƯ',
+    currentBalanceLabel: 'SỐ DƯ HIỆN TẠI',
+    noHistoryForAccount: 'Chưa có biến động số dư cho tài khoản này.',
+    addPlanTitle: 'Lập Kế Hoạch Mới',
+    planTitleHint: 'Tên kế hoạch (vD: Du lịch Đà Lạt, Mua ô tô)',
+    budgetHint: 'Tổng dự trù ngân sách (₫)',
+    linksHint: 'Link TikTok/Facebook (Cách nhau bằng dấu phẩy)',
+    planTypeLabel: 'LOẠI DỰ ÁN',
+    savePlan: 'Lưu Kế Hoạch',
+    navBillShare: 'BillShare',
+    navGroups: 'Nhóm',
+    navWallet: 'Ví của tôi',
+    navPlanning: 'Lập kế hoạch',
+    navAnalysis: 'Phân tích',
+    navLedger: 'Thu Chi',
+    tabMovement: 'Biến động',
+    tabAnalysis: 'Phân tích',
+    incomeLabel: 'THU NHẬP',
+    expenseLabel: 'CHI TIÊU',
+    netBalanceLabel: 'Số dư ròng: ',
+    categoryBreakdown: 'CHI TIÊU THEO DANH MỤC',
+    inPlan: 'Trong kế hoạch',
+    outPlan: 'Ngoài kế hoạch',
+    noCashFlow: 'Chưa có dũ liệu dòng tiền. Mọi chi tiêu sẽ hiện ở đây!',
+    groupTypeSettlement: 'Chia tiền',
+    groupTypePlanning: 'Kế hoạch/Du lịch',
+    groupTypeAsset: 'Tài sản chung',
+    groupTypeLabel: 'LOẠI NHÓM',
+    analysisOverview: 'BÁO CÁO TỔNG QUAN',
+    planningOverview: 'QUẢN LÝ KẾ HOẠCH',
+    vcbScan: 'Quét QR VCB',
+    vcbScanHint: 'Tự động nhập từ mã QR ngân hàng',
+    insufficientBalance: 'Số dư không đủ',
+    insufficientBalanceMsg: 'Số tiền chi vượt quá số dư hiện tại của ví',
+    continueAnyway: 'Bạn vẫn muốn tiếp tục?',
+    proceed: 'Tiếp tục',
+    chooseAction: 'Chọn hành động',
+    viewDetails: 'Xem chi tiết',
+    deletedExpense: 'Đã xóa giao dịch',
   );
 
   static const _en = AppStrings._(
@@ -140,6 +197,7 @@ class AppStrings {
     tabPay: 'Expenses',
     settlement: 'Settle Up',
     addExpense: 'Add Expense',
+    addTransaction: 'Add Transaction',
     today: 'Today',
     yesterday: 'Yesterday',
     deleteAll: 'Delete All',
@@ -166,6 +224,7 @@ class AppStrings {
     enterName: 'Enter name...',
     addMemberTitle: 'Add Member',
     addExpenseTitle: 'Add New Expense',
+    addTransactionTitle: 'Add New Transaction',
     editExpenseTitle: 'Edit Expense',
     deleteExpense: 'Delete expense?',
     deleteExpenseMsg: 'Are you sure you want to delete this expense?',
@@ -184,6 +243,8 @@ class AppStrings {
     monthlyTotalLabel: 'This Month',
     thisWeek: 'This week',
     thisMonth: 'This month',
+    weeklyTotal: 'Weekly Total',
+    monthlyTotal: 'Monthly Total',
     enterDescription: 'Please enter a description',
     enterAmount: 'Please enter an amount',
     invalidAmount: 'Invalid amount',
@@ -218,6 +279,8 @@ class AppStrings {
     totalMismatch: 'Total amount mismatch!',
     remainingBalance: 'Remaining',
     amountMismatch: 'Mismatch',
+    recordToWallet: 'Record to my wallet',
+    recordedTo: 'Recorded to: ',
     edited: 'EDITED',
     editedAt: 'Edited at',
     logout: 'Logout',
@@ -253,7 +316,65 @@ class AppStrings {
     deleteGroupConfirmMsg: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
     remindedUser: 'Reminded {name}',
     cannotDeleteSelf: 'You cannot remove yourself from the group.',
+    walletTitle: 'My Wallet',
+    accountsLabel: 'Accounts & Wallets',
+    planningTitle: 'Planning Hub',
+    addAccount: 'Add Account',
+    addPlan: 'Create Plan',
+    totalNetWorth: 'Total Net Worth',
+    totalNetWorthLabel: 'TOTAL NET WORTH',
+    addAccountTitle: 'Add New Account',
+    accountNameHint: 'Account name (e.g. VCB, MoMo, Cash)',
+    initialBalanceHint: 'Current balance (₫)',
+    accountTypeLabel: 'ACCOUNT TYPE',
+    saveAccount: 'Save Account',
+    historyLabel: 'TRANSACTION HISTORY',
+    currentBalanceLabel: 'CURRENT BALANCE',
+    noHistoryForAccount: 'No transaction history for this account.',
+    addPlanTitle: 'Create New Plan',
+    planTitleHint: 'Plan title (e.g. Vacation, Car)',
+    budgetHint: 'Total budget (₫)',
+    linksHint: 'Reference links (comma separated)',
+    planTypeLabel: 'PLAN TYPE',
+    savePlan: 'Save Plan',
+    navBillShare: 'BILLSHARE',
+    navGroups: 'GROUPS',
+    navWallet: 'MY WALLET',
+    navPlanning: 'PLANNING',
+    navAnalysis: 'Analysis',
+    navLedger: 'Ledger',
+    tabMovement: 'Movement',
+    tabAnalysis: 'Analysis',
+    incomeLabel: 'INCOME',
+    expenseLabel: 'EXPENSE',
+    netBalanceLabel: 'Net Balance: ',
+    categoryBreakdown: 'CATEGORY BREAKDOWN',
+    inPlan: 'In Plan',
+    outPlan: 'Out of Plan',
+    noCashFlow: 'No cash flow data yet. All transactions will appear here!',
+    groupTypeSettlement: 'Settlement',
+    groupTypePlanning: 'Planning/Trip',
+    groupTypeAsset: 'Shared Assets',
+    groupTypeLabel: 'GROUP TYPE',
+    analysisOverview: 'OVERVIEW REPORT',
+    planningOverview: 'PLAN MANAGEMENT',
+    vcbScan: 'VCB QR Scan',
+    vcbScanHint: 'Auto-fill from banking QR code',
+    insufficientBalance: 'Insufficient Balance',
+    insufficientBalanceMsg: 'The expense amount exceeds the current wallet balance',
+    continueAnyway: 'Do you still want to proceed?',
+    proceed: 'Proceed',
+    chooseAction: 'Choose action',
+    viewDetails: 'View details',
+    deletedExpense: 'Deleted transaction',
   );
+
+  final String vcbScan;
+  final String vcbScanHint;
+  final String insufficientBalance;
+  final String insufficientBalanceMsg;
+  final String continueAnyway;
+  final String proceed;
 
   final String appTitle;
   final String members;
@@ -263,6 +384,7 @@ class AppStrings {
   final String tabPay;
   final String settlement;
   final String addExpense;
+  final String addTransaction;
   final String today;
   final String yesterday;
   final String deleteAll;
@@ -289,6 +411,7 @@ class AppStrings {
   final String enterName;
   final String addMemberTitle;
   final String addExpenseTitle;
+  final String addTransactionTitle;
   final String editExpenseTitle;
   final String deleteExpense;
   final String deleteExpenseMsg;
@@ -307,6 +430,8 @@ class AppStrings {
   final String monthlyTotalLabel;
   final String thisWeek;
   final String thisMonth;
+  final String weeklyTotal;
+  final String monthlyTotal;
   final String enterDescription;
   final String enterAmount;
   final String invalidAmount;
@@ -341,6 +466,8 @@ class AppStrings {
   final String totalMismatch;
   final String remainingBalance;
   final String amountMismatch;
+  final String recordToWallet;
+  final String recordedTo;
   final String edited;
   final String editedAt;
   final String logout;
@@ -376,6 +503,51 @@ class AppStrings {
   final String deleteGroupConfirmMsg;
   final String remindedUser;
   final String cannotDeleteSelf;
+  final String walletTitle;
+  final String accountsLabel;
+  final String planningTitle;
+  final String addAccount;
+  final String addPlan;
+  final String totalNetWorth;
+  final String totalNetWorthLabel;
+  final String addAccountTitle;
+  final String accountNameHint;
+  final String initialBalanceHint;
+  final String accountTypeLabel;
+  final String saveAccount;
+  final String historyLabel;
+  final String currentBalanceLabel;
+  final String noHistoryForAccount;
+  final String addPlanTitle;
+  final String planTitleHint;
+  final String budgetHint;
+  final String linksHint;
+  final String planTypeLabel;
+  final String savePlan;
+  final String navBillShare;
+  final String navGroups;
+  final String navWallet;
+  final String navPlanning;
+  final String navAnalysis;
+  final String navLedger;
+  final String tabMovement;
+  final String tabAnalysis;
+  final String incomeLabel;
+  final String expenseLabel;
+  final String netBalanceLabel;
+  final String categoryBreakdown;
+  final String inPlan;
+  final String outPlan;
+  final String noCashFlow;
+  final String groupTypeSettlement;
+  final String groupTypePlanning;
+  final String groupTypeAsset;
+  final String groupTypeLabel;
+  final String analysisOverview;
+  final String planningOverview;
+  final String chooseAction;
+  final String viewDetails;
+  final String deletedExpense;
 
   const AppStrings._({
     required this.appTitle,
@@ -386,6 +558,7 @@ class AppStrings {
     required this.tabPay,
     required this.settlement,
     required this.addExpense,
+    required this.addTransaction,
     required this.today,
     required this.yesterday,
     required this.deleteAll,
@@ -412,6 +585,7 @@ class AppStrings {
     required this.enterName,
     required this.addMemberTitle,
     required this.addExpenseTitle,
+    required this.addTransactionTitle,
     required this.editExpenseTitle,
     required this.deleteExpense,
     required this.deleteExpenseMsg,
@@ -430,6 +604,8 @@ class AppStrings {
     required this.monthlyTotalLabel,
     required this.thisWeek,
     required this.thisMonth,
+    required this.weeklyTotal,
+    required this.monthlyTotal,
     required this.enterDescription,
     required this.enterAmount,
     required this.invalidAmount,
@@ -464,6 +640,8 @@ class AppStrings {
     required this.totalMismatch,
     required this.remainingBalance,
     required this.amountMismatch,
+    required this.recordToWallet,
+    required this.recordedTo,
     required this.edited,
     required this.editedAt,
     required this.logout,
@@ -499,6 +677,57 @@ class AppStrings {
     required this.deleteGroupConfirmMsg,
     required this.remindedUser,
     required this.cannotDeleteSelf,
+    required this.walletTitle,
+    required this.accountsLabel,
+    required this.planningTitle,
+    required this.addAccount,
+    required this.addPlan,
+    required this.totalNetWorth,
+    required this.totalNetWorthLabel,
+    required this.addAccountTitle,
+    required this.accountNameHint,
+    required this.initialBalanceHint,
+    required this.accountTypeLabel,
+    required this.saveAccount,
+    required this.historyLabel,
+    required this.currentBalanceLabel,
+    required this.noHistoryForAccount,
+    required this.addPlanTitle,
+    required this.planTitleHint,
+    required this.budgetHint,
+    required this.linksHint,
+    required this.planTypeLabel,
+    required this.savePlan,
+    required this.navBillShare,
+    required this.navGroups,
+    required this.navWallet,
+    required this.navPlanning,
+    required this.navAnalysis,
+    required this.navLedger,
+    required this.tabMovement,
+    required this.tabAnalysis,
+    required this.incomeLabel,
+    required this.expenseLabel,
+    required this.netBalanceLabel,
+    required this.categoryBreakdown,
+    required this.inPlan,
+    required this.outPlan,
+    required this.noCashFlow,
+    required this.groupTypeSettlement,
+    required this.groupTypePlanning,
+    required this.groupTypeAsset,
+    required this.groupTypeLabel,
+    required this.analysisOverview,
+    required this.planningOverview,
+    required this.vcbScan,
+    required this.vcbScanHint,
+    required this.insufficientBalance,
+    required this.insufficientBalanceMsg,
+    required this.continueAnyway,
+    required this.proceed,
+    required this.chooseAction,
+    required this.viewDetails,
+    required this.deletedExpense,
   });
 
   String getCategoryName(Category c) {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models.dart';
 import '../l10n/strings.dart';
+import '../state/app_state.dart';
 
 class UIHelpers {
   static const List<Color> avatarColors = [
@@ -161,11 +163,92 @@ class UIHelpers {
     final dateOnly = DateTime(dt.year, dt.month, dt.day);
 
     if (dateOnly == today) {
-      return DateFormat('HH:mm').format(dt);
+      return '${s.today} ${DateFormat('HH:mm').format(dt)}';
     } else if (dateOnly == yesterday) {
       return '${s.yesterday} ${DateFormat('HH:mm').format(dt)}';
     } else {
       return '${DateFormat('dd/MM').format(dt)} ${DateFormat('HH:mm').format(dt)}';
     }
+  }
+
+  static Map<String, List<BaseTransaction>> groupTransactionsByMonth(List<BaseTransaction> txs) {
+    // Ensure chronological order (newest first)
+    final sorted = [...txs]..sort((a, b) => b.date.compareTo(a.date));
+    final grouped = <String, List<BaseTransaction>>{};
+    
+    for (final tx in sorted) {
+      final key = DateFormat('MMMM yyyy').format(tx.date);
+      if (!grouped.containsKey(key)) {
+        grouped[key] = [];
+      }
+      grouped[key]!.add(tx);
+    }
+    return grouped;
+  }
+
+  static void showAccountPicker({
+    required BuildContext context,
+    required AppState state,
+    required Function(Account) onSelected,
+  }) {
+    final s = AppStrings.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.navWallet, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 16),
+            if (state.accounts.isEmpty) 
+               const Padding(
+                 padding: EdgeInsets.symmetric(vertical: 20),
+                 child: Text("Chưa có ví nào để hạch toán", style: TextStyle(color: Colors.white38)),
+               ),
+            ...state.accounts.map((acc) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.account_balance_wallet_rounded, color: Theme.of(context).colorScheme.primary),
+              title: Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(fmt.format(acc.currentBalance), style: const TextStyle(fontSize: 12, color: Colors.white38)),
+              onTap: () {
+                onSelected(acc);
+                Navigator.pop(ctx);
+              },
+            )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+    
+    // Remove all non-numeric characters
+    final cleanString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanString.isEmpty) return const TextEditingValue();
+
+    final value = double.parse(cleanString);
+    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0);
+    String newText = formatter.format(value).trim();
+
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
   }
 }

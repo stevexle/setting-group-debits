@@ -7,11 +7,11 @@ import '../../../models.dart';
 import '../../../state/app_state.dart';
 import '../../../l10n/strings.dart';
 import '../../ui_helpers.dart';
-import '../../add_transaction_modal.dart';
-import 'common_widgets.dart';
+import '../add_transaction_modal.dart';
+import '../../widgets/common_widgets.dart';
 
 void confirmRemoveTransaction(
-    BuildContext context, Transaction tx, AppStrings s) {
+    BuildContext context, GroupTransaction tx, AppStrings s) {
   final state = context.read<AppState>();
   final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -26,7 +26,6 @@ void confirmRemoveTransaction(
           text: TextSpan(
               style: TextStyle(
                   color: isDark ? Colors.white70 : Colors.black87,
-                  fontFamily: 'Outfit',
                   fontSize: 14),
               children: [
                 const TextSpan(text: 'Delete '),
@@ -62,12 +61,12 @@ void confirmRemoveTransaction(
     ),
     confirmLabel: s.delete,
     isDestructive: true,
-    onConfirm: () => state.removeTransaction(tx.id),
+    onConfirm: () => state.removeGroupTransaction(tx.id),
   );
 }
 
 class TransactionCard extends StatelessWidget {
-  final Transaction tx;
+  final GroupTransaction tx;
   final List<Person> people;
   final NumberFormat fmt;
   final AppStrings s;
@@ -156,11 +155,13 @@ class TransactionCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
+                    border:
+                        Border.all(color: Colors.amber.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.lock_clock_rounded, color: Colors.amber, size: 20),
+                      const Icon(Icons.lock_clock_rounded,
+                          color: Colors.amber, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -189,7 +190,8 @@ class TransactionCard extends StatelessWidget {
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
-                          builder: (context) => AddTransactionModal(initialTransaction: tx),
+                          builder: (context) =>
+                              AddTransactionModal(initialTransaction: tx),
                         );
                       },
               ),
@@ -198,7 +200,8 @@ class TransactionCard extends StatelessWidget {
               opacity: isLocked ? 0.3 : 1.0,
               child: ListTile(
                 leading: const Icon(Icons.delete_rounded, color: Colors.red),
-                title: Text(s.delete, style: const TextStyle(color: Colors.red)),
+                title:
+                    Text(s.delete, style: const TextStyle(color: Colors.red)),
                 onTap: isLocked
                     ? null
                     : () {
@@ -237,10 +240,10 @@ class TransactionCard extends StatelessWidget {
                 child: Text(
                   tx.description,
                   style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      fontFamily: 'Outfit'),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -248,16 +251,19 @@ class TransactionCard extends StatelessWidget {
               if (isEdited) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: isDark ? 0.15 : 0.1),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.2), width: 0.5),
+                    border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.2), width: 0.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.edit_rounded, size: 8, color: Colors.amber),
+                      const Icon(Icons.edit_rounded,
+                          size: 8, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
                         '${s.edited} ${UIHelpers.formatSmartDate(tx.updatedAt!, s)}',
@@ -265,7 +271,6 @@ class TransactionCard extends StatelessWidget {
                           fontSize: 8,
                           fontWeight: FontWeight.w900,
                           color: Colors.amber,
-                          fontFamily: 'Outfit',
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -278,7 +283,7 @@ class TransactionCard extends StatelessWidget {
           const SizedBox(height: 4),
           _ParticipantIcons(
               payerId: tx.payerId,
-              participantIds: tx.participantIds,
+              participants: tx.participants,
               people: people,
               s: s),
         ],
@@ -293,17 +298,17 @@ class TransactionCard extends StatelessWidget {
         Text(
           fmt.format(tx.amount),
           style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              fontFamily: 'Outfit'),
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+          ),
         ),
         const SizedBox(height: 4),
         Text(
-          DateFormat('HH:mm').format(tx.date),
+          '${UIHelpers.formatSmartDate(tx.date, s)} • ${DateFormat('HH:mm').format(tx.date)}',
           style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
               color: isDark ? Colors.white30 : Colors.black26),
         ),
       ],
@@ -313,13 +318,13 @@ class TransactionCard extends StatelessWidget {
 
 class _ParticipantIcons extends StatelessWidget {
   final String payerId;
-  final List<String> participantIds;
+  final List<String> participants;
   final List<Person> people;
   final AppStrings s;
 
   const _ParticipantIcons({
     required this.payerId,
-    required this.participantIds,
+    required this.participants,
     required this.people,
     required this.s,
   });
@@ -329,7 +334,7 @@ class _ParticipantIcons extends StatelessWidget {
     final payer = people.firstWhere((p) => p.id == payerId,
         orElse: () => Person(name: 'Unknown'));
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final visibleIds = participantIds.where((id) => id != payerId).toList();
+    final visibleIds = participants.where((id) => id != payerId).toList();
 
     return Row(
       children: [
@@ -402,7 +407,7 @@ class _ParticipantIcons extends StatelessWidget {
 
 class DateGroup extends StatelessWidget {
   final DateTime date;
-  final List<Transaction> transactions;
+  final List<GroupTransaction> transactions;
   final List<Person> people;
   final NumberFormat fmt;
   final AppStrings s;
@@ -445,9 +450,8 @@ class DateGroup extends StatelessWidget {
             ),
           ),
         ),
-        ...transactions
-            .map((tx) => TransactionCard(tx: tx, people: people, fmt: fmt, s: s))
-            .toList(),
+        ...transactions.map(
+            (tx) => TransactionCard(tx: tx, people: people, fmt: fmt, s: s)),
       ],
     );
   }

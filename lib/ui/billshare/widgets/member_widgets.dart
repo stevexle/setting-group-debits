@@ -8,9 +8,10 @@ import '../../../models.dart';
 import '../../../state/app_state.dart';
 import '../../../l10n/strings.dart';
 import '../../ui_helpers.dart';
-import 'common_widgets.dart';
+import '../../widgets/common_widgets.dart';
 
-void showAddMember(BuildContext context, AppStrings s, {Person? existingPerson}) {
+void showAddMember(BuildContext context, AppStrings s,
+    {Person? existingPerson}) {
   final ctrl = TextEditingController(text: existingPerson?.name);
   final state = context.read<AppState>();
   int selectedColor =
@@ -150,7 +151,6 @@ void confirmRemovePerson(BuildContext context, Person person, AppStrings s) {
           text: TextSpan(
               style: TextStyle(
                   color: isDark ? Colors.white70 : Colors.black87,
-                  fontFamily: 'Outfit',
                   fontSize: 14),
               children: [
                 const TextSpan(text: 'Delete '),
@@ -215,7 +215,8 @@ class MemberCell extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        showPersonSummary(context, person, paid, share, net, s, NumberFormat.currency(locale: 'vi_VN', symbol: '₫'));
+        showPersonSummary(context, person, paid, share, net, s,
+            NumberFormat.currency(locale: 'vi_VN', symbol: '₫'));
       },
       onLongPress: () {
         HapticFeedback.heavyImpact();
@@ -230,7 +231,8 @@ class MemberCell extends StatelessWidget {
         } else if (state.isPersonInvolvedInTransactions(person.id)) {
           UIHelpers.showLiquidDialog(
             context: context,
-            title: s.cannotDeleteLastGroup.replaceAll('nhóm cuối cùng', 'thành viên này'), 
+            title: s.cannotDeleteLastGroup
+                .replaceAll('nhóm cuối cùng', 'thành viên này'),
             content: Text(s.deleteMemberMsg),
             confirmLabel: s.understood,
             onConfirm: () {},
@@ -303,10 +305,10 @@ class MemberCell extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                    fontFamily: 'Outfit')),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                )),
             const SizedBox(height: 2),
             StatusChip(net: net, cs: cs)
           ]),
@@ -333,8 +335,8 @@ class StatusChip extends StatelessWidget {
           color: color.withValues(alpha: 0.1)),
       child: Text(
         isMatched ? '0' : '${net > 0 ? '+' : ''}${net.toInt()}',
-        style: TextStyle(
-            fontSize: 8, fontWeight: FontWeight.w900, color: color),
+        style:
+            TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: color),
       ),
     );
   }
@@ -374,148 +376,153 @@ class MemberSection extends StatelessWidget {
           final net = netBalances[p.id] ?? 0.0;
           final paid = paidBalances[p.id] ?? 0.0;
           final share = shareBalances[p.id] ?? 0.0;
-          
+
           return MemberCell(
-            person: p, 
-            paid: paid,
-            share: share,
-            net: net, 
-            s: s, 
-            cs: cs
-          );
+              person: p, paid: paid, share: share, net: net, s: s, cs: cs);
         },
       ),
     );
   }
 }
 
-void showPersonSummary(BuildContext context, Person person, double paid, double share, double net, AppStrings s, NumberFormat fmt) {
+void showPersonSummary(BuildContext context, Person person, double paid,
+    double share, double net, AppStrings s, NumberFormat fmt) {
   showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      final accentColor = UIHelpers.getAvatarColor(person.colorIndex);
-      
-      return Container(
-        padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0E0E1A), // Strict dark background like the image
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
-              blurRadius: 40,
-              offset: const Offset(0, -10),
-            )
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Avatar with initial
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: accentColor.withValues(alpha: 0.15),
-                border: Border.all(color: accentColor.withValues(alpha: 0.1), width: 1),
-                image: person.avatarUrl.isNotEmpty
-                    ? (person.avatarUrl.startsWith('http')
-                        ? DecorationImage(image: NetworkImage(person.avatarUrl), fit: BoxFit.cover)
-                        : (File(person.avatarUrl).existsSync()
-                            ? DecorationImage(image: FileImage(File(person.avatarUrl)), fit: BoxFit.cover)
-                            : null))
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final accentColor = UIHelpers.getAvatarColor(person.colorIndex);
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+          decoration: BoxDecoration(
+            color: const Color(
+                0xFF0E0E1A), // Strict dark background like the image
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 40,
+                offset: const Offset(0, -10),
+              )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Avatar with initial
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accentColor.withValues(alpha: 0.15),
+                  border: Border.all(
+                      color: accentColor.withValues(alpha: 0.1), width: 1),
+                  image: person.avatarUrl.isNotEmpty
+                      ? (person.avatarUrl.startsWith('http')
+                          ? DecorationImage(
+                              image: NetworkImage(person.avatarUrl),
+                              fit: BoxFit.cover)
+                          : (File(person.avatarUrl).existsSync()
+                              ? DecorationImage(
+                                  image: FileImage(File(person.avatarUrl)),
+                                  fit: BoxFit.cover)
+                              : null))
+                      : null,
+                ),
+                child: person.avatarUrl.isEmpty ||
+                        (!person.avatarUrl.startsWith('http') &&
+                            !File(person.avatarUrl).existsSync())
+                    ? Center(
+                        child: Text(
+                          person.name.isNotEmpty
+                              ? person.name[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: accentColor,
+                          ),
+                        ),
+                      )
                     : null,
               ),
-              child: person.avatarUrl.isEmpty || 
-                     (!person.avatarUrl.startsWith('http') && !File(person.avatarUrl).existsSync())
-                  ? Center(
-                      child: Text(
-                        person.name.isNotEmpty ? person.name[0].toUpperCase() : '?',
-                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: accentColor, fontFamily: 'Outfit'),
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              person.name, 
-              style: const TextStyle(
-                fontSize: 28, 
-                fontWeight: FontWeight.w900, 
-                fontFamily: 'Outfit',
-                color: Colors.white,
-                letterSpacing: -0.5,
-              )
-            ),
-            const SizedBox(height: 32),
-            
-            // Financial Stats Rows
-            _buildStatRow(s.totalPaid, paid, const Color(0xFF66BB6A), fmt),
-            const SizedBox(height: 16),
-            _buildStatRow(s.yourShare, share, const Color(0xFFFFA726), fmt),
-            const SizedBox(height: 16),
-            const Divider(color: Colors.white12, height: 1),
-            const SizedBox(height: 16),
-            _buildStatRow(s.tabBill, net, Colors.white, fmt, isNet: true),
-            
-            const SizedBox(height: 40),
-            
-            // Stadium Edit Button
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  showAddMember(context, s, existingPerson: person);
-                },
-                icon: Icon(Icons.edit_rounded, color: accentColor, size: 20),
-                label: Text(
-                  s.edit.toUpperCase(),
-                  style: TextStyle(
-                    color: accentColor, 
+              const SizedBox(height: 20),
+              Text(person.name,
+                  style: const TextStyle(
+                    fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                    letterSpacing: 1.2,
-                    fontFamily: 'Outfit'
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  )),
+              const SizedBox(height: 32),
+
+              // Financial Stats Rows
+              _buildStatRow(s.totalPaid, paid, const Color(0xFF66BB6A), fmt),
+              const SizedBox(height: 16),
+              _buildStatRow(s.yourShare, share, const Color(0xFFFFA726), fmt),
+              const SizedBox(height: 16),
+              const Divider(color: Colors.white12, height: 1),
+              const SizedBox(height: 16),
+              _buildStatRow(s.tabBill, net, Colors.white, fmt, isNet: true),
+
+              const SizedBox(height: 40),
+
+              // Stadium Edit Button
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    showAddMember(context, s, existingPerson: person);
+                  },
+                  icon: Icon(Icons.edit_rounded, color: accentColor, size: 20),
+                  label: Text(
+                    s.edit.toUpperCase(),
+                    style: TextStyle(
+                      color: accentColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                        color: accentColor.withValues(alpha: 0.3), width: 1.5),
+                    shape: const StadiumBorder(),
                   ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: accentColor.withValues(alpha: 0.3), width: 1.5),
-                  shape: const StadiumBorder(),
-                ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      );
-    }
-  );
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      });
 }
 
-Widget _buildStatRow(String label, double value, Color color, NumberFormat fmt, {bool isNet = false}) {
+Widget _buildStatRow(String label, double value, Color color, NumberFormat fmt,
+    {bool isNet = false}) {
   return Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Text(
-        isNet ? "Net balance" : label, // Use English "Net balance" as requested by image
+        isNet
+            ? "Net balance"
+            : label, // Use English "Net balance" as requested by image
         style: TextStyle(
-          fontSize: 16, 
-          fontWeight: isNet ? FontWeight.w800 : FontWeight.w600, 
+          fontSize: 16,
+          fontWeight: isNet ? FontWeight.w800 : FontWeight.w600,
           color: isNet ? Colors.white70 : Colors.white54,
-          fontFamily: 'Outfit'
         ),
       ),
       Text(
         fmt.format(value),
         style: TextStyle(
-          fontSize: 18, 
-          fontWeight: FontWeight.w900, 
-          color: color, 
-          fontFamily: 'Outfit',
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
+          color: color,
           decoration: isNet ? TextDecoration.underline : null,
           decorationColor: color,
         ),

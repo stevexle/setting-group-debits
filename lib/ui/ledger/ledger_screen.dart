@@ -64,11 +64,11 @@ class _LedgerScreenState extends State<LedgerScreen>
         ],
       ),
       fab: DashboardFAB(
-        enabled: state.people.isNotEmpty,
+        enabled: state.accounts.isNotEmpty,
         label: s.addTransaction,
         cs: cs,
         onTap: () => _showAddTransaction(context),
-      ), // Using body override
+      ),
       body: TabBarView(
         controller: _tabController,
         children: [

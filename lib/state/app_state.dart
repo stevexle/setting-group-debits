@@ -98,6 +98,17 @@ class AppState extends ChangeNotifier {
     if (group == null || group.syncId == null) return true;
     return group.ownerId == _currentUser?.uid;
   }
+
+  void _removeLocalGroup(String? syncId, String? groupId) {
+    if (syncId == null && groupId == null) return;
+    _groups.removeWhere((g) => (syncId != null && g.syncId == syncId) || (groupId != null && g.id == groupId));
+    if (_activeGroupId == groupId || (syncId != null && _activeGroup?.syncId == syncId)) {
+      _activeGroupId = _groups.isNotEmpty ? _groups.first.id : null;
+      _cachedActiveGroup = null;
+    }
+    _saveState();
+    notifyListeners();
+  }
   
   bool get hasAnyPendingTransactions {
     return groupTransactions.any((t) => t.status == TransactionStatus.pending);

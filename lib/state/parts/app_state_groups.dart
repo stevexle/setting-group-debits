@@ -141,16 +141,22 @@ extension AppStateGroups on AppState {
     final isOwner = _currentUser != null && group.ownerId == _currentUser!.uid;
 
     if (syncId != null) {
-      if (isOwner) {
-        // Owner delete: remove for everyone
-        await _syncService.deleteCloudGroup(syncId);
-      } else if (_currentUser != null) {
-        // Member delete: just leave
-        await _syncService.leaveGroup(syncId, _currentUser!.uid);
+      try {
+        if (isOwner) {
+          // Owner delete: remove for everyone
+          await _syncService.deleteCloudGroup(syncId);
+        } else if (_currentUser != null) {
+          // Member delete: just leave
+          await _syncService.leaveGroup(syncId, _currentUser!.uid);
+        }
+      } catch (e) {
+        debugPrint("Cloud delete/leave failed, probably already gone: $e");
+        // We continue to local removal anyway
       }
     }
 
-    _groups.removeAt(targetIdx);
+    // Re-verify the list hasn't changed during awaits
+    _groups.removeWhere((g) => g.id == id);
     if (_activeGroupId == id) {
       _activeGroupId = _groups.isNotEmpty ? _groups.first.id : null;
       _cachedActiveGroup = null;

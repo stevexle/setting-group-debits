@@ -188,18 +188,22 @@ class _SimpleTransactionModalState extends State<SimpleTransactionModal> {
 
   Widget _buildHeader(AppStrings s, bool isDark, ColorScheme cs) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          _isEditing
-              ? (_isPayment ? s.save : s.editExpenseTitle)
-              : (_isPayment ? s.incomeLabel : s.addTransactionTitle),
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+        Expanded(
+          child: Text(
+            _isEditing
+                ? (_isPayment ? s.save : s.editExpenseTitle)
+                : (_isPayment ? s.incomeLabel : s.addTransactionTitle),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
+        const SizedBox(width: 8),
         _buildTypeToggle(isDark, cs, s),
       ],
     );

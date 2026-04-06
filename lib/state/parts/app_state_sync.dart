@@ -38,17 +38,7 @@ extension AppStateSync on AppState {
           // Check for membership kick-out
           final List memberUids = List.from(data['memberUids'] ?? []);
           if (_currentUser != null && !memberUids.contains(_currentUser!.uid)) {
-            // Force user out of this group!
-            final idx = _groups.indexWhere((g) => g.syncId == syncId);
-            if (idx != -1) _groups.removeAt(idx);
-            
-            if (_activeGroupId == group.id) {
-               _activeGroupId = null;
-               _cachedActiveGroup = null;
-            }
-            
-            _saveState();
-            notifyListeners();
+            _removeLocalGroup(syncId, group.id);
             return;
           }
 
@@ -62,6 +52,9 @@ extension AppStateSync on AppState {
             _saveState();
             notifyListeners();
           }
+        } else {
+          // Document GONE on Firestore! Remove locally.
+          _removeLocalGroup(syncId, group.id);
         }
       });
 

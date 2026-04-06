@@ -111,8 +111,12 @@ extension AppStateGroups on AppState {
   bool isGroupBalanced(String groupId) {
     if (_balancedCache.containsKey(groupId)) return _balancedCache[groupId]!;
 
-    final group =
-        _groups.firstWhere((g) => g.id == groupId, orElse: () => _groups.first);
+    if (_groups.isEmpty) return true;
+
+    final groupIndex = _groups.indexWhere((g) => g.id == groupId);
+    if (groupIndex == -1) return true;
+
+    final group = _groups[groupIndex];
     if (group.people.isEmpty) return true;
 
     bool result;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../l10n/strings.dart';
@@ -14,6 +15,7 @@ class PlanningHubScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final s = AppStrings.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
     // Aggregated plans from all groups or root level plans
     final allPlans = state.groups.expand((g) => g.plans).toList();
@@ -36,7 +38,7 @@ class PlanningHubScreen extends StatelessWidget {
                               MaterialPageRoute(
                                   builder: (_) =>
                                       PlanDetailScreen(plan: plan))),
-                          child: _buildPlanCard(context, plan, isDark, s),
+                          child: _buildPlanCard(context, plan, isDark, s, fmt),
                         ))
                     .toList(),
               ),
@@ -76,7 +78,7 @@ class PlanningHubScreen extends StatelessWidget {
   }
 
   Widget _buildPlanCard(
-      BuildContext context, dynamic plan, bool isDark, AppStrings s) {
+      BuildContext context, dynamic plan, bool isDark, AppStrings s, NumberFormat fmt) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -113,7 +115,7 @@ class PlanningHubScreen extends StatelessWidget {
                               fontSize: 10,
                               color: Colors.white54,
                               letterSpacing: 1.0)),
-                      Text('${plan.budgetTotal}đ',
+                      Text(fmt.format(plan.budgetTotal),
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14)),
                     ],
@@ -128,7 +130,7 @@ class PlanningHubScreen extends StatelessWidget {
                               fontSize: 10,
                               color: Colors.white54,
                               letterSpacing: 1.0)),
-                      Text('${plan.currentSpent}đ',
+                      Text(fmt.format(plan.currentSpent),
                           style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,

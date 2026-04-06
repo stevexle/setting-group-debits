@@ -76,11 +76,14 @@ class LoginScreen extends StatelessWidget {
                       ),
                       const Spacer(flex: 3),
                       // Google Sign In Button
-                      _GoogleSignInButton(
-                        onTap: () => state.signInWithGoogle(),
-                        isDark: isDark,
-                        label: s.loginGoogle,
-                      ),
+                      if (context.watch<AppState>().isLoading)
+                        const CircularProgressIndicator()
+                      else
+                        _GoogleSignInButton(
+                          onTap: () => state.signInWithGoogle(),
+                          isDark: isDark,
+                          label: s.loginGoogle,
+                        ),
                       const SizedBox(height: 48),
                     ],
                   ),

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +29,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   late Set<String> _participants;
   late Category _category;
   String? _sourceAccountId;
+  String? _planId;
 
   bool _isCustomSplit = false;
   final Map<String, TextEditingController> _customControllers = {};
@@ -56,8 +59,18 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
     _category = tx?.category ?? Category.food;
     _isCustomSplit = tx?.customAmounts != null;
-    _sourceAccountId = tx?.sourceAccountId ??
-        (state.accounts.isNotEmpty ? state.accounts.first.id : null);
+    
+    if (tx != null) {
+      _sourceAccountId = tx.sourceAccountId;
+    } else {
+      // Default account logic for new transactions
+      if (_payerId == state.me?.id) {
+        _sourceAccountId = _getDefaultAccountId(state);
+      } else {
+        _sourceAccountId = state.accounts.isNotEmpty ? state.accounts.first.id : null;
+      }
+    }
+    _planId = tx?.planId;
 
     for (var person in state.people) {
       double val = 0;
@@ -221,13 +234,46 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                                 s.whoPays, Icons.person_rounded, cs, isDark),
                             const SizedBox(height: 8),
                             _buildPayerPicker(state, isDark, cs),
+                            if (_payerId == (state.me?.id ?? '')) ...[
+                              const SizedBox(height: 12),
+                              _headerLabel(s.accountsLabel, Icons.account_balance_wallet_rounded, cs, isDark),
+                              const SizedBox(height: 8),
+                              _buildAccountPicker(state.accounts, isDark, cs, s),
+                            ] else ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded, size: 14, color: Colors.amber),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "Chỉ ghi nhận nợ cho nhóm, không trừ vào ví cá nhân của bạn.",
+                                        style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : Colors.black54),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 16),
                             _headerLabel(s.category, Icons.grid_view_rounded,
                                 cs, isDark),
                             const SizedBox(height: 8),
                             _buildCategoryPicker(s, isDark, cs),
+                            if (state.plans.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              _headerLabel(s.selectPlan, Icons.assignment_rounded, cs, isDark),
+                              const SizedBox(height: 8),
+                              _buildPlanPicker(state.plans, isDark, cs, s),
+                            ],
                             const SizedBox(height: 16),
-                            const SizedBox(height: 20),
                             _buildSplitSection(s, isDark, cs, state, fmt),
                             const SizedBox(height: 24),
                             _buildConfirmButton(cs, s, state),
@@ -326,6 +372,57 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     );
   }
 
+  Widget _buildAvatar(Person p, double size, bool isSelected) {
+    final color = UIHelpers.getAvatarColor(p.colorIndex);
+    final hasImage = p.avatarUrl.isNotEmpty;
+    final isNetwork = p.avatarUrl.startsWith('http');
+    final fileExists = !isNetwork && p.avatarUrl.isNotEmpty && File(p.avatarUrl).existsSync();
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected ? color : Colors.white.withValues(alpha: 0.1),
+          width: isSelected ? 1.5 : 1,
+        ),
+        boxShadow: isSelected ? [
+          BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))
+        ] : [],
+      ),
+      child: ClipOval(
+        child: hasImage
+            ? (isNetwork
+                ? CachedNetworkImage(
+                    imageUrl: p.avatarUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(color: color.withValues(alpha: 0.1)),
+                    errorWidget: (context, url, error) => _fallbackAvatar(p, color, isSelected),
+                  )
+                : (fileExists
+                    ? Image.file(File(p.avatarUrl), fit: BoxFit.cover)
+                    : _fallbackAvatar(p, color, isSelected)))
+            : _fallbackAvatar(p, color, isSelected),
+      ),
+    );
+  }
+
+  Widget _fallbackAvatar(Person p, Color color, bool isSelected) {
+    return Container(
+      color: color.withValues(alpha: isSelected ? 0.2 : 0.05),
+      alignment: Alignment.center,
+      child: Text(
+        p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
+        style: TextStyle(
+          fontSize: 14,
+          color: isSelected ? color : Colors.grey,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
   Widget _buildPayerPicker(AppState state, bool isDark, ColorScheme cs) {
     return SizedBox(
       height: 40,
@@ -338,16 +435,63 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
+              avatar: _buildAvatar(person, 20, isSelected),
               label: Text(person.name),
               selected: isSelected,
-              onSelected: (selected) =>
-                  selected ? setState(() => _payerId = person.id) : null,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _payerId = person.id;
+                    // If switching to 'me', try to default to a bank account
+                    if (_payerId == state.me?.id && !_isEditing) {
+                      _sourceAccountId = _getDefaultAccountId(state);
+                    } else {
+                      _sourceAccountId = null;
+                    }
+                  });
+                }
+              },
               selectedColor: cs.primary,
               labelStyle: TextStyle(
                   color: isSelected
                       ? Colors.white
                       : (isDark ? Colors.white60 : Colors.black54),
                   fontSize: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide.none),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlanPicker(List<BudgetPlan> plans, bool isDark, ColorScheme cs, AppStrings s) {
+    return SizedBox(
+      height: 38,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: plans.length + 1,
+        itemBuilder: (context, index) {
+          final isNone = index == 0;
+          final plan = isNone ? null : plans[index - 1];
+          final isSelected = isNone ? (_planId == null) : (_planId == plan!.id);
+          
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(isNone ? s.none : plan?.title ?? ''),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) setState(() => _planId = isNone ? null : plan?.id);
+              },
+              selectedColor: cs.primary.withValues(alpha: 0.8),
+              labelStyle: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? Colors.white60 : Colors.black54),
+                  fontSize: 11),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide.none),
@@ -377,6 +521,45 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               selected: isSelected,
               onSelected: (selected) => setState(() => _category = cat),
               selectedColor: color,
+              labelStyle: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? Colors.white60 : Colors.black54),
+                  fontSize: 11),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide.none),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAccountPicker(List<Account> accounts, bool isDark, ColorScheme cs, AppStrings s) {
+    return SizedBox(
+      height: 38,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: accounts.length,
+        itemBuilder: (context, index) {
+          final acc = accounts[index];
+          final isSelected = _sourceAccountId == acc.id;
+          
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              avatar: Icon(
+                acc.type == AccountType.bank ? Icons.account_balance_rounded : Icons.wallet_rounded,
+                size: 12,
+                color: isSelected ? Colors.white : cs.primary,
+              ),
+              label: Text(acc.name),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) setState(() => _sourceAccountId = acc.id);
+              },
+              selectedColor: cs.primary.withValues(alpha: 0.8),
               labelStyle: TextStyle(
                   color: isSelected
                       ? Colors.white
@@ -502,7 +685,6 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
   Widget _buildSplitRow(Person p, bool isDark, ColorScheme cs, AppStrings s) {
     final isIncluded = _participants.contains(p.id);
-    final avatarColor = UIHelpers.getAvatarColor(p.colorIndex);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.only(bottom: 6),
@@ -533,26 +715,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: isIncluded
-                                ? avatarColor
-                                : Colors.grey.withValues(alpha: 0.2),
-                            width: 1.5)),
-                    child: CircleAvatar(
-                      backgroundColor: avatarColor.withValues(
-                          alpha: isIncluded ? 0.2 : 0.05),
-                      child: Text(p.name[0].toUpperCase(),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: isIncluded ? avatarColor : Colors.grey,
-                              fontWeight: FontWeight.w900)),
-                    ),
-                  ),
+                  _buildAvatar(p, 36, isIncluded),
                   if (isIncluded)
                     Positioned(
                         bottom: -1,
@@ -658,6 +821,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         isPayment: widget.initialTransaction?.isPayment ?? false,
         customAmounts: customAmounts,
         sourceAccountId: (_payerId == (state.me?.id ?? '')) ? _sourceAccountId : null,
+        planId: _planId,
       );
 
       // Check balance if current user is the payer
@@ -703,6 +867,14 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         ],
       ),
     );
+  }
+
+  String? _getDefaultAccountId(AppState state) {
+    try {
+      return state.accounts.firstWhere((a) => a.type == AccountType.bank).id;
+    } catch (_) {
+      return state.accounts.isNotEmpty ? state.accounts.first.id : null;
+    }
   }
 
   Widget _buildTextField(

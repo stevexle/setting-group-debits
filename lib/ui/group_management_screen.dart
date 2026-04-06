@@ -16,8 +16,9 @@ class GroupManagementScreen extends StatefulWidget {
 }
 
 class _GroupManagementScreenState extends State<GroupManagementScreen> {
-  final _idController = TextEditingController();
   bool _isJoining = false;
+  final TextEditingController _idController = TextEditingController();
+  final GlobalKey<ShakeWidgetState> _shakeKey = GlobalKey<ShakeWidgetState>();
 
   @override
   void dispose() {
@@ -32,42 +33,34 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return MainScreenScaffold(
-      title: s.myGroups,
-      fab: null,
+    return Stack(
       children: [
-        _buildJoinCreateCard(context, state, s, cs, isDark),
-        const SizedBox(height: 24),
-        if (state.groups.isEmpty)
-          EmptyCard(icon: Icons.group_off_rounded, message: s.noGroupsYet)
-        else if (MediaQuery.of(context).size.width > 600)
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 0,
-            childAspectRatio: 2.2,
-            children: state.groups
-                .map((group) =>
-                    _buildGroupCard(context, state, group, s, cs, isDark))
-                .toList(),
-          )
-        else
-          ...state.groups.map(
-              (group) => _buildGroupCard(context, state, group, s, cs, isDark)),
-        if (_isJoining)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black45,
-              child: const Center(
-                child: GlassContainer(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-            ),
-          ),
+        MainScreenScaffold(
+          title: s.myGroups,
+          fab: null,
+          children: [
+            _buildJoinCreateCard(context, state, s, cs, isDark),
+            const SizedBox(height: 24),
+            if (state.groups.isEmpty)
+              EmptyCard(icon: Icons.group_off_rounded, message: s.noGroupsYet)
+            else if (MediaQuery.of(context).size.width > 600)
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 0,
+                childAspectRatio: 2.2,
+                children: state.groups
+                    .map((group) =>
+                        _buildGroupCard(context, state, group, s, cs, isDark))
+                    .toList(),
+              )
+            else
+              ...state.groups.map(
+                  (group) => _buildGroupCard(context, state, group, s, cs, isDark)),
+          ],
+        ),
       ],
     );
   }
@@ -80,26 +73,43 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         Row(
           children: [
             Expanded(
+              child: ShakeWidget(
+                key: _shakeKey,
                 child: StyledTextField(
-                    controller: _idController, hint: s.inviteCodeHint)),
+                    controller: _idController, hint: s.inviteCodeHint),
+              ),
+            ),
             const SizedBox(width: 8),
             PrimaryChipButton(
-              label: s.join,
-              icon: Icons.login_rounded,
-              color: cs.primary,
-              onTap: () async {
+              label: _isJoining ? '${s.join}...' : s.join,
+              icon: _isJoining ? Icons.hourglass_top_rounded : Icons.login_rounded,
+              color: _isJoining ? cs.outline : cs.primary,
+              onTap: _isJoining ? () {} : () async {
                 final id = _idController.text.trim();
                 if (id.isNotEmpty) {
                   setState(() => _isJoining = true);
                   try {
                     await state.joinSyncGroup(id);
+                    if (context.mounted) {
+                      context.read<TabNavigationState>().setTab(1);
+                    }
                   } catch (e) {
+                    HapticFeedback.vibrate();
+                    _shakeKey.currentState?.shake();
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text(s.failedToJoin),
-                          backgroundColor: Colors.redAccent,
-                          behavior: SnackBarBehavior.floating),
+                        content: Row(
+                          children: [
+                            const Icon(Icons.error_outline_rounded, color: Colors.white),
+                            const SizedBox(width: 12),
+                            Text(s.failedToJoin, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
                     );
                   } finally {
                     if (mounted) setState(() => _isJoining = false);
@@ -142,9 +152,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         child: InkWell(
           onTap: () {
             state.switchGroup(group.id);
-            context
-                .read<TabNavigationState>()
-                .setTab(0); // Switch to BillShare Settlement
+            final targetTab = group.type == GroupType.settlement ? 1 : 4;
+            context.read<TabNavigationState>().setTab(targetTab);
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,15 +180,14 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                   Builder(
                     builder: (ctx) {
                       final isBalanced = state.isGroupBalanced(group.id);
-                      final canDelete = state.groups.length > 1 && isBalanced;
                       return IconButton(
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
                           Icons.delete_outline_rounded,
                           size: 18,
-                          color: canDelete
+                          color: isBalanced
                               ? Colors.redAccent.withValues(alpha: 0.8)
-                              : (isDark ? Colors.white10 : Colors.black12),
+                              : Colors.redAccent.withValues(alpha: 0.3),
                         ),
                         onPressed: () =>
                             _handleDeleteGroup(context, state, group, s),
@@ -283,11 +291,6 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         icon = Icons.luggage_rounded;
         color = const Color(0xFFF59E0B);
         break;
-      case GroupType.asset:
-        label = s.groupTypeAsset;
-        icon = Icons.account_balance_rounded;
-        color = const Color(0xFF10B981);
-        break;
     }
 
     return Container(
@@ -355,11 +358,6 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                     icon = Icons.luggage_rounded;
                     color = const Color(0xFFF59E0B);
                     break;
-                  case GroupType.asset:
-                    label = s.groupTypeAsset;
-                    icon = Icons.account_balance_rounded;
-                    color = const Color(0xFF10B981);
-                    break;
                 }
 
                 return Expanded(
@@ -411,15 +409,6 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
 
   void _handleDeleteGroup(
       BuildContext context, AppState state, Group group, AppStrings s) {
-    if (state.groups.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(s.cannotDeleteLastGroup),
-            behavior: SnackBarBehavior.floating),
-      );
-      return;
-    }
-
     if (!state.isGroupBalanced(group.id)) {
       UIHelpers.showLiquidDialog(
         context: context,
@@ -433,13 +422,19 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
       return;
     }
 
+    final isOwner = state.currentUser?.uid == group.ownerId;
+    final title = isOwner ? s.deleteGroupConfirm : s.leaveGroupConfirm;
+    final msg = isOwner
+        ? s.deleteGroupConfirmMsg.replaceAll('{name}', group.name)
+        : s.leaveGroupMsg.replaceAll('{name}', group.name);
+
     UIHelpers.showLiquidDialog(
       context: context,
-      title: s.deleteGroupConfirm,
-      content: Text(s.deleteGroupConfirmMsg.replaceAll('{name}', group.name),
+      title: title,
+      content: Text(msg,
           style: const TextStyle(
               color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500)),
-      confirmLabel: s.delete,
+      confirmLabel: isOwner ? s.delete : s.leaveGroupConfirm.replaceAll('?', ''),
       isDestructive: true,
       onConfirm: () => state.deleteGroup(group.id),
     );

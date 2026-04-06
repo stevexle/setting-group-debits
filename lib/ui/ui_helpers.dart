@@ -30,7 +30,7 @@ class UIHelpers {
       case Category.entertainment: return Icons.movie_filter_rounded;
       case Category.home: return Icons.home_rounded;
       case Category.health: return Icons.favorite_rounded;
-      case Category.other: return Icons.category_rounded;
+      default: return Icons.category_rounded;
     }
   }
 
@@ -43,7 +43,7 @@ class UIHelpers {
       case Category.entertainment: return const Color(0xFF9575CD);
       case Category.home: return const Color(0xFFAED581);
       case Category.health: return const Color(0xFFE57373);
-      case Category.other: return const Color(0xFF90A4AE);
+      default: return const Color(0xFF90A4AE);
     }
   }
 

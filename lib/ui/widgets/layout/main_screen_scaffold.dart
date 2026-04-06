@@ -38,6 +38,7 @@ class MainScreenScaffold extends StatelessWidget {
     final user = state.currentUser;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor:
           isDark ? const Color(0xFF0E0E1A) : const Color(0xFFF5F5FF),
       appBar: AppBar(
@@ -49,7 +50,7 @@ class MainScreenScaffold extends StatelessWidget {
         backgroundColor: Colors.transparent,
         centerTitle: centerTitle,
         elevation: 0,
-        bottom: appBarBottom,
+        bottom: appBarBottom != null ? ResponsiveAppBarBottom(child: appBarBottom!) : null,
         actions: [
           if (appBarActions != null) ...appBarActions!,
           if (showAvatar) _buildAvatar(context, user),
@@ -57,31 +58,41 @@ class MainScreenScaffold extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          const LiquidBackground(),
-          if (body != null)
-            Padding(
-              padding: padding ?? const EdgeInsets.symmetric(horizontal: 16),
-              child: body!,
-            )
-          else
-            LayoutBuilder(
+          const Positioned.fill(child: LiquidBackground()),
+          SafeArea(
+            child: LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 600;
-                final horizontalPadding =
-                    isWide ? (constraints.maxWidth - 600) / 2 : 16.0;
+                final isWide = constraints.maxWidth > 800;
+                final maxContentWidth = isWide ? 800.0 : constraints.maxWidth;
 
-                return ListView(
-                  padding: padding ??
-                      EdgeInsets.symmetric(
-                          horizontal: horizontalPadding, vertical: 12),
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    ...children,
-                    const SizedBox(height: 100), // Spacing for FAB/BottomNav
-                  ],
+                Widget content;
+                if (body != null) {
+                  content = Padding(
+                    padding: padding ?? const EdgeInsets.symmetric(horizontal: 16),
+                    child: body!,
+                  );
+                } else {
+                  content = ListView(
+                    padding: padding ??
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      ...children,
+                      const SizedBox(height: 100),
+                    ],
+                  );
+                }
+
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: maxContentWidth,
+                    child: content,
+                  ),
                 );
               },
             ),
+          ),
         ],
       ),
       floatingActionButton: fab,
@@ -214,6 +225,26 @@ class MainScreenScaffold extends StatelessWidget {
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
         ),
+      ),
+    );
+  }
+}
+
+class ResponsiveAppBarBottom extends StatelessWidget
+    implements PreferredSizeWidget {
+  final PreferredSizeWidget child;
+
+  const ResponsiveAppBarBottom({super.key, required this.child});
+
+  @override
+  Size get preferredSize => child.preferredSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 800),
+        child: child,
       ),
     );
   }

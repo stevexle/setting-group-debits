@@ -5,38 +5,7 @@ class DebtEngine {
   static List<Settlement> settleDebts(List<Person> people, List<GroupTransaction> transactions) {
     if (people.isEmpty) return [];
 
-    // Map to store net balance of each person
-    // Balance = amount paid - amount owed
-    final Map<String, double> netBalances = {
-      for (var p in people) p.id: 0.0,
-    };
-
-    // Calculate net balances
-    for (var tx in transactions) {
-      if (tx.participants.isEmpty) continue;
-
-      // Only include people that still exist in the project
-      if (netBalances.containsKey(tx.payerId)) {
-        netBalances[tx.payerId] = netBalances[tx.payerId]! + tx.amount;
-      }
-
-      // Handle split or custom amounts
-      if (tx.customAmounts != null) {
-        for (final participantId in tx.participants) {
-          if (netBalances.containsKey(participantId)) {
-            final amt = tx.customAmounts![participantId] ?? 0.0;
-            netBalances[participantId] = netBalances[participantId]! - amt;
-          }
-        }
-      } else {
-        final splitAmount = tx.amount / tx.participants.length;
-        for (final participantId in tx.participants) {
-          if (netBalances.containsKey(participantId)) {
-            netBalances[participantId] = netBalances[participantId]! - splitAmount;
-          }
-        }
-      }
-    }
+    final netBalances = calculateBalances(people, transactions).netBalances;
 
     // Separate into creditors and debtors
     final List<MapEntry<String, double>> creditors = [];
@@ -85,4 +54,51 @@ class DebtEngine {
   }
 
   static double _min(double a, double b) => a < b ? a : b;
+
+  static BalanceResults calculateBalances(
+      List<Person> people, List<GroupTransaction> transactions) {
+    final Map<String, double> netBalances = {for (var p in people) p.id: 0.0};
+    final Map<String, double> paidAmounts = {for (var p in people) p.id: 0.0};
+    final Map<String, double> shareAmounts = {for (var p in people) p.id: 0.0};
+
+    for (var tx in transactions) {
+      if (tx.status == TransactionStatus.rejected) continue;
+      if (tx.participants.isEmpty) continue;
+
+      final currentNet = netBalances[tx.payerId];
+      if (currentNet != null) {
+        netBalances[tx.payerId] = currentNet + tx.amount;
+        paidAmounts[tx.payerId] = (paidAmounts[tx.payerId] ?? 0.0) + tx.amount;
+      }
+
+      if (tx.customAmounts != null) {
+        for (final pid in tx.participants) {
+          final pNet = netBalances[pid];
+          if (pNet != null) {
+            final amt = tx.customAmounts![pid] ?? 0.0;
+            netBalances[pid] = pNet - amt;
+            shareAmounts[pid] = (shareAmounts[pid] ?? 0.0) + amt;
+          }
+        }
+      } else {
+        final split = tx.amount / tx.participants.length;
+        for (final pid in tx.participants) {
+          final pNet = netBalances[pid];
+          if (pNet != null) {
+            netBalances[pid] = pNet - split;
+            shareAmounts[pid] = (shareAmounts[pid] ?? 0.0) + split;
+          }
+        }
+      }
+    }
+    return BalanceResults(netBalances, paidAmounts, shareAmounts);
+  }
+}
+
+class BalanceResults {
+  final Map<String, double> netBalances;
+  final Map<String, double> paidAmounts;
+  final Map<String, double> shareAmounts;
+
+  BalanceResults(this.netBalances, this.paidAmounts, this.shareAmounts);
 }

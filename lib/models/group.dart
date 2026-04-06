@@ -5,8 +5,7 @@ import 'budget_plan.dart';
 
 enum GroupType {
   settlement,
-  planning,
-  asset
+  planning
 }
 
 class Group {
@@ -17,6 +16,7 @@ class Group {
   final List<BudgetPlan> plans;
   final GroupType type;
   final String? syncId; // Firestore document ID if synced
+  final String? ownerId; // UID of the creator/owner
 
   Group({
     String? id,
@@ -26,6 +26,7 @@ class Group {
     this.plans = const [],
     this.type = GroupType.settlement,
     this.syncId,
+    this.ownerId,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() => {
@@ -36,6 +37,7 @@ class Group {
         'plans': plans.map((p) => p.toJson()).toList(),
         'type': type.name,
         'syncId': syncId,
+        'ownerId': ownerId,
       };
 
   // Firestore only needs metadata (name, people, memberUids)
@@ -46,6 +48,7 @@ class Group {
         'type': type.name,
         'people': people.map((p) => p.toJson()).toList(),
         'syncId': syncId,
+        'ownerId': ownerId,
         'memberUids': people
             .where((p) => p.userId != null)
             .map((p) => p.userId!)
@@ -71,6 +74,7 @@ class Group {
           orElse: () => GroupType.settlement,
         ),
         syncId: json['syncId'],
+        ownerId: json['ownerId'],
       );
 
   Group copyWith(
@@ -79,7 +83,8 @@ class Group {
           List<GroupTransaction>? groupTransactions,
           List<BudgetPlan>? plans,
           GroupType? type,
-          String? syncId}) =>
+          String? syncId,
+          String? ownerId}) =>
       Group(
         id: id,
         name: name ?? this.name,
@@ -88,5 +93,6 @@ class Group {
         plans: plans ?? this.plans,
         type: type ?? this.type,
         syncId: syncId ?? this.syncId,
+        ownerId: ownerId ?? this.ownerId,
       );
 }

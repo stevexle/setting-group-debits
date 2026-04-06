@@ -68,15 +68,15 @@ class _LedgerScreenState extends State<LedgerScreen>
         label: s.addTransaction,
         cs: cs,
         onTap: () => _showAddTransaction(context),
-      ),
-      children: const [], // Using body override
+      ), // Using body override
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildHistoryTab(context, cashFlow, fmt, isDark),
+          _buildHistoryTab(context, cashFlow, fmt, isDark, state),
           _buildAnalysisTab(context, fmt, isDark, state),
         ],
       ),
+      children: const [],
     );
   }
 
@@ -90,7 +90,7 @@ class _LedgerScreenState extends State<LedgerScreen>
   }
 
   Widget _buildHistoryTab(BuildContext context, List<BaseTransaction> cashFlow,
-      NumberFormat fmt, bool isDark) {
+      NumberFormat fmt, bool isDark, AppState state) {
     final s = AppStrings.of(context);
     if (cashFlow.isEmpty) {
       return Center(
@@ -103,6 +103,20 @@ class _LedgerScreenState extends State<LedgerScreen>
 
     final grouped = UIHelpers.groupTransactionsByMonth(cashFlow);
     final monthKeys = grouped.keys.toList();
+
+    final runningBalances = <String, double>{};
+    double currentBal = state.totalNetWorth;
+    for (var i = 0; i < cashFlow.length; i++) {
+      final tx = cashFlow[i];
+      runningBalances[tx.id] = currentBal;
+      
+      bool isNegative = !tx.isPayment;
+      if (tx is GroupTransaction && tx.isPayment) {
+        isNegative = tx.payerId == (state.me?.id ?? '');
+      }
+      
+      currentBal += (isNegative ? tx.amount : -tx.amount);
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(4, 16, 4, 100),
@@ -126,7 +140,7 @@ class _LedgerScreenState extends State<LedgerScreen>
                 ),
               ),
             ),
-            ...txs.map((tx) => _buildCashFlowItem(context, tx, fmt, isDark)),
+            ...txs.map((tx) => _buildCashFlowItem(context, tx, fmt, isDark, runningBalances[tx.id] ?? 0)),
             const SizedBox(height: 12),
           ],
         );
@@ -153,7 +167,7 @@ class _LedgerScreenState extends State<LedgerScreen>
           const SizedBox(height: 24),
           SummaryActionCard(
             title: s.analysisOverview.toUpperCase(),
-            actionLabel: 'XEM VÍ',
+            actionLabel: s.viewWallet.toUpperCase(),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const WalletScreen()),
@@ -338,7 +352,7 @@ class _LedgerScreenState extends State<LedgerScreen>
   }
 
   Widget _buildCashFlowItem(
-      BuildContext context, BaseTransaction tx, NumberFormat fmt, bool isDark) {
+      BuildContext context, BaseTransaction tx, NumberFormat fmt, bool isDark, double balanceAfter) {
     final s = AppStrings.of(context);
     final state = context.read<AppState>();
     return Padding(
@@ -358,6 +372,31 @@ class _LedgerScreenState extends State<LedgerScreen>
             child: const Icon(Icons.delete_sweep_rounded,
                 color: Colors.white, size: 24),
           ),
+          confirmDismiss: (_) async {
+            bool isPendingSettlement = tx is GroupTransaction && tx.isPayment && tx.status == TransactionStatus.pending;
+            bool isLockedExpense = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+
+            if (isPendingSettlement || isLockedExpense) {
+              _confirmDelete(context, state, tx, s);
+              return false;
+            }
+            return await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: const Color(0xFF1E1E2E),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: Text(s.deleteExpense, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+                content: Text(s.deleteExpenseMsg, style: const TextStyle(color: Colors.white70)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel, style: const TextStyle(color: Colors.white38))),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(s.delete, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          },
           onDismissed: (_) {
             if (tx is GroupTransaction) {
               state.removeGroupTransaction(tx.id);
@@ -397,16 +436,36 @@ class _LedgerScreenState extends State<LedgerScreen>
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        '${tx.isPayment ? "+" : "-"}${fmt.format(tx.amount)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                          color: tx.isPayment
-                              ? Colors.green
-                              : (isDark ? Colors.white : Colors.black87),
-                        ),
-                      ),
+                      Builder(builder: (context) {
+                        bool isNegative = !tx.isPayment;
+                        if (tx is GroupTransaction && tx.isPayment) {
+                          isNegative = tx.payerId == (state.me?.id ?? '');
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${isNegative ? "-" : "+"}${fmt.format(tx.amount)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                color: isNegative
+                                    ? (isDark ? Colors.white : Colors.black87)
+                                    : Colors.green,
+                              ),
+                            ),
+                            Text(
+                              'Balance: ${fmt.format(balanceAfter)}',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white24 : Colors.black26,
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
                       if (tx is PersonalTransaction && tx.planId != null)
                         Text(
                           s.inPlan,
@@ -428,11 +487,35 @@ class _LedgerScreenState extends State<LedgerScreen>
   }
 
   void _showTransactionOptions(BuildContext context, AppState state, BaseTransaction tx, AppStrings s) {
+    final myPersonIds = state.myPersonIds;
+    bool isLockedGroup = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+    bool isShared = false;
+    bool isPayer = true;
+
+    if (tx is GroupTransaction) {
+      isShared = true;
+      isPayer = myPersonIds.contains(tx.payerId);
+    } else if (tx is PersonalTransaction) {
+      if (tx.id.startsWith('p_') || tx.isShared || tx.groupId != null) {
+        isShared = true;
+        isPayer = tx.payerId != null && myPersonIds.contains(tx.payerId);
+      }
+    }
+
+    // Shared items are READ-ONLY in the Ledger to prevent split inconsistencies
+    // forcing the user to use BillShare for editing.
+    final canEdit = !isShared && isPayer && !isLockedGroup;
+    final canDelete = true; // Always allow local history cleanup
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => AppOptionsSheet(
         title: s.chooseAction,
+        message: (isShared) 
+          ? "Shared transaction. To edit group splits or participants, please use the BillShare tab."
+          : (isLockedGroup ? "Settlements in progress. Clear all settlements before editing expenses." : null),
+        messageColor: isShared ? Colors.blue : Colors.amber,
         options: [
           AppOption(
             label: s.viewDetails,
@@ -445,6 +528,7 @@ class _LedgerScreenState extends State<LedgerScreen>
           AppOption(
             label: s.edit,
             icon: Icons.edit_rounded,
+            enabled: canEdit,
             onTap: () {
               Navigator.pop(ctx);
               if (tx is PersonalTransaction) {
@@ -464,6 +548,16 @@ class _LedgerScreenState extends State<LedgerScreen>
               }
             },
           ),
+          AppOption(
+            label: s.delete,
+            icon: Icons.delete_rounded,
+            isDestructive: true,
+            enabled: canDelete,
+            onTap: () {
+              Navigator.pop(ctx);
+              _confirmDelete(context, state, tx, s);
+            },
+          ),
         ],
       ),
     );
@@ -481,6 +575,34 @@ class _LedgerScreenState extends State<LedgerScreen>
 
   void _confirmDelete(
       BuildContext context, AppState state, BaseTransaction tx, AppStrings s) {
+    bool isPendingSettlement = tx is GroupTransaction && tx.isPayment && tx.status == TransactionStatus.pending;
+    bool isLockedExpense = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+
+    if (isPendingSettlement || isLockedExpense) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E2E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(isPendingSettlement ? s.settlement.toUpperCase() : "LOCKED",
+              style: TextStyle(fontWeight: FontWeight.w900, color: isPendingSettlement ? Colors.orangeAccent : Colors.amber)),
+          content: Text(
+            isPendingSettlement 
+              ? "This settlement transaction is still pending. Please wait for the recipient to Confirm or Reject before deleting."
+              : "Settlements are in progress for this group. Please clear or complete all settlements before deleting or editing shared expenses.",
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.done.toUpperCase(), style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

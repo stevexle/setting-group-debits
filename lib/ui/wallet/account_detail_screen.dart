@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../../state/app_state.dart';
 import '../../models.dart';
 import '../../l10n/strings.dart';
@@ -8,6 +9,8 @@ import '../widgets/common_widgets.dart';
 import '../ui_helpers.dart';
 import '../ledger/widgets/simple_transaction_modal.dart';
 import '../billshare/add_transaction_modal.dart';
+import '../ledger/widgets/transaction_detail_modal.dart';
+import 'add_account_modal.dart';
 
 class AccountDetailScreen extends StatelessWidget {
   final Account account;
@@ -23,58 +26,89 @@ class AccountDetailScreen extends StatelessWidget {
         NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
     // Filter transactions that belong to this account
-    final accountFlow =
-        state.allTransactions.where((t) => t.sourceAccountId == account.id).toList();
+    final accountFlow = state.allTransactions.where((t) {
+      if (t.sourceAccountId == account.id) {
+        return true;
+      }
+      if (t is GroupTransaction &&
+          t.participantBalances?.containsValue(account.id) == true) {
+        return true;
+      }
+      return false;
+    }).toList();
+
+    // Listen for account updates to refresh the UI
+    final currentAccount = state.accounts.firstWhere((a) => a.id == account.id, orElse: () => account);
 
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0E0E1A) : const Color(0xFFF5F5FF),
       body: Stack(
         children: [
-          const LiquidBackground(),
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildAppBar(context, isDark),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: _buildBalanceHeader(s, fmt, isDark),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: SectionLabel(
-                  label: s.historyLabel,
-                  icon: Icons.history_rounded,
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: accountFlow.isEmpty
-                    ? SliverToBoxAdapter(
-                        child: EmptyCard(
-                          message: s.noHistoryForAccount,
-                          icon: Icons.history_edu_rounded,
+          const Positioned.fill(child: LiquidBackground()),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 800;
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: isWide ? 800 : constraints.maxWidth,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _buildAppBar(context, currentAccount, isDark),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _buildBalanceHeader(currentAccount, s, fmt, isDark),
                         ),
-                      )
-                    : SliverToBoxAdapter(
-                        child: _buildGroupedHistory(context, accountFlow, fmt, isDark),
                       ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+                      SliverToBoxAdapter(
+                        child: SectionLabel(
+                          label: s.historyLabel,
+                          icon: Icons.history_rounded,
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: accountFlow.isEmpty
+                            ? SliverToBoxAdapter(
+                                child: EmptyCard(
+                                  message: s.noHistoryForAccount,
+                                  icon: Icons.history_edu_rounded,
+                                ),
+                              )
+                            : SliverToBoxAdapter(
+                                child: _buildGroupedHistory(
+                                    context, accountFlow, fmt, isDark),
+                              ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAppBar(BuildContext context, bool isDark) {
+  Widget _buildAppBar(BuildContext context, Account acc, bool isDark) {
     return SliverAppBar(
       pinned: true,
       backgroundColor: Colors.transparent,
+      actions: [
+        IconButton(
+          onPressed: () => AddAccountModal.show(context, initialAccount: acc),
+          icon: Icon(Icons.edit_note_rounded, 
+                     color: isDark ? Colors.white70 : Colors.black54),
+        ),
+        const SizedBox(width: 8),
+      ],
       title: Text(
-        account.name,
+        acc.name,
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w900,
@@ -84,7 +118,7 @@ class AccountDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBalanceHeader(AppStrings s, NumberFormat fmt, bool isDark) {
+  Widget _buildBalanceHeader(Account acc, AppStrings s, NumberFormat fmt, bool isDark) {
     return GlassContainer(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       gradientColors: [
@@ -104,7 +138,7 @@ class AccountDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            fmt.format(account.currentBalance),
+            fmt.format(acc.currentBalance),
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w900,
@@ -119,7 +153,7 @@ class AccountDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              account.type.name.toUpperCase(),
+              acc.type.name.toUpperCase(),
               style: const TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
@@ -134,6 +168,19 @@ class AccountDetailScreen extends StatelessWidget {
   Widget _buildGroupedHistory(BuildContext context, List<BaseTransaction> accountFlow, NumberFormat fmt, bool isDark) {
     final grouped = UIHelpers.groupTransactionsByMonth(accountFlow);
     final monthKeys = grouped.keys.toList();
+
+    final runningBalances = <String, double>{};
+    double currentBal = account.currentBalance;
+    for (var i = 0; i < accountFlow.length; i++) {
+        final tx = accountFlow[i];
+        runningBalances[tx.id] = currentBal;
+        
+        bool txIsOutgoing = tx.sourceAccountId == account.id;
+        if (tx is PersonalTransaction && tx.isPayment) txIsOutgoing = false; // Income
+        if (tx is GroupTransaction && tx.isPayment && tx.participantBalances?.containsValue(account.id) == true) txIsOutgoing = false; // Recipient
+        
+        currentBal += (txIsOutgoing ? tx.amount : -tx.amount);
+    }
 
     return Column(
       children: monthKeys.map((monthKey) {
@@ -153,7 +200,7 @@ class AccountDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            ...txs.map((tx) => _buildFlowItem(context, tx, fmt, isDark)),
+            ...txs.map((tx) => _buildFlowItem(context, tx, fmt, isDark, runningBalances[tx.id] ?? 0)),
             const SizedBox(height: 8),
           ],
         );
@@ -161,31 +208,26 @@ class AccountDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFlowItem(BuildContext context, BaseTransaction tx, NumberFormat fmt, bool isDark) {
+  Widget _buildFlowItem(BuildContext context, BaseTransaction tx, NumberFormat fmt, bool isDark, double balanceAfter) {
     final s = AppStrings.of(context);
     final state = context.read<AppState>();
+    
+    bool isOutgoing = tx.sourceAccountId == account.id;
+    if (tx is PersonalTransaction && tx.isPayment) {
+      isOutgoing = false; // Personal Income
+    }
+    if (tx is GroupTransaction &&
+        tx.isPayment &&
+        tx.participantBalances?.containsValue(account.id) == true) {
+      isOutgoing = false; // Linked settlement recipient
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            if (tx is PersonalTransaction) {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (ctx) => SimpleTransactionModal(initialTransaction: tx),
-              );
-            } else if (tx is GroupTransaction) {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (ctx) => AddTransactionModal(initialTransaction: tx),
-              );
-            }
-          },
+          onTap: () => _showTransactionActions(context, state, tx, s),
           onLongPress: () => _confirmDelete(context, state, tx, s),
           borderRadius: BorderRadius.circular(20),
           child: GlassContainer(
@@ -216,15 +258,28 @@ class AccountDetailScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      '${tx.isPayment ? "+" : "-"}${fmt.format(tx.amount)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                        color: tx.isPayment
-                            ? Colors.green
-                            : (isDark ? Colors.white : Colors.black87),
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${isOutgoing ? "-" : "+"}${fmt.format(tx.amount)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            color: isOutgoing
+                                ? (isDark ? Colors.white : Colors.black87)
+                                : Colors.green,
+                          ),
+                        ),
+                        Text(
+                          'Balance: ${fmt.format(balanceAfter)}',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white24 : Colors.black26,
+                          ),
+                        ),
+                      ],
                     ),
                     if (tx is PersonalTransaction && tx.planId != null)
                       Text(
@@ -274,6 +329,154 @@ class AccountDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showTransactionActions(BuildContext context, AppState state, BaseTransaction tx, AppStrings s) {
+    HapticFeedback.lightImpact();
+    
+    // Permission check for shared transactions
+    bool isLockedGroup = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+    bool isShared = false;
+
+    // Determine if it's billshare-linked
+    if (tx is GroupTransaction) {
+      isShared = true;
+    } else if (tx is PersonalTransaction) {
+      if (tx.id.startsWith('p_') || tx.isShared || tx.groupId != null) {
+        isShared = true;
+      }
+    }
+
+    // Shared logic: In this screen, shared transactions are ALWAYS READ-ONLY for editing
+    // because you cannot manage participant splits from the personal ledger.
+    // However, users CAN delete them from their personal history independently.
+    final canEdit = !isShared && !isLockedGroup;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isShared)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 20),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Shared transaction. To edit group splits or participants, please use the BillShare tab.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (isLockedGroup)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_clock_rounded, color: Colors.amber, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Settlements in progress. Clear all settlements before editing expenses.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ListTile(
+              leading: const Icon(Icons.info_outline_rounded),
+              title: Text(s.viewDetails),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showTransactionDetail(context, tx);
+              },
+            ),
+            Opacity(
+              opacity: canEdit ? 1.0 : 0.3,
+              child: ListTile(
+                leading: const Icon(Icons.edit_rounded),
+                title: Text(s.edit),
+                onTap: !canEdit
+                    ? null
+                    : () {
+                        Navigator.pop(ctx);
+                        if (tx is PersonalTransaction) {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (ctx) => SimpleTransactionModal(initialTransaction: tx),
+                          );
+                        } else if (tx is GroupTransaction) {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (ctx) => AddTransactionModal(initialTransaction: tx),
+                          );
+                        }
+                      },
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_rounded, color: Colors.red),
+              title: Text(s.delete, style: const TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDelete(context, state, tx, s);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTransactionDetail(BuildContext context, BaseTransaction tx) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => TransactionDetailModal(tx: tx),
     );
   }
 }

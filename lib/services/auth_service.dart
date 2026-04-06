@@ -21,11 +21,7 @@ class AuthService {
     try {
       log.info("Starting Google Sign In...");
       await _ensureInitialized();
-      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
-      if (googleUser == null) {
-        log.info("Google Sign In cancelled by user");
-        return null;
-      }
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
       final authorizedUser = await googleUser.authorizationClient.authorizeScopes([]);
       final accessToken = authorizedUser.accessToken;

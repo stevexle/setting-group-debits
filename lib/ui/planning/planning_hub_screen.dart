@@ -23,20 +23,23 @@ class PlanningHubScreen extends StatelessWidget {
       children: [
         _buildCreatePlanAction(context, s, isDark),
         const SizedBox(height: 24),
-        if (allPlans.isEmpty)
-          const EmptyCard(
-            message:
-                'Bạn chưa có kế hoạch nào. Hãy lập kế hoạch cho chuyến đi hoặc sự kiện sắp tới!',
-            icon: Icons.auto_awesome_motion_rounded,
-          )
-        else
-          ...allPlans.map((plan) => GestureDetector(
-                onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => PlanDetailScreen(plan: plan))),
-                child: _buildPlanCard(context, plan, isDark),
-              )),
+        allPlans.isEmpty
+            ? EmptyCard(
+                message: s.noPlansMsg,
+                icon: Icons.auto_awesome_motion_rounded,
+              )
+            : Column(
+                children: allPlans
+                    .map((plan) => GestureDetector(
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      PlanDetailScreen(plan: plan))),
+                          child: _buildPlanCard(context, plan, isDark, s),
+                        ))
+                    .toList(),
+              ),
       ],
     );
   }
@@ -72,7 +75,8 @@ class PlanningHubScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlanCard(BuildContext context, dynamic plan, bool isDark) {
+  Widget _buildPlanCard(
+      BuildContext context, dynamic plan, bool isDark, AppStrings s) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -84,7 +88,7 @@ class PlanningHubScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildPlanTypeTag(plan.type, isDark),
+                _buildPlanTypeTag(context, plan.type, isDark, s),
                 const Icon(Icons.more_horiz_rounded,
                     size: 18, color: Colors.white38),
               ],
@@ -104,8 +108,8 @@ class PlanningHubScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('DỰ TRÙ',
-                          style: TextStyle(
+                      Text(s.estimatedBudget,
+                          style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white54,
                               letterSpacing: 1.0)),
@@ -119,8 +123,8 @@ class PlanningHubScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('CHI THỰC TẾ',
-                          style: TextStyle(
+                      Text(s.actualSpent,
+                          style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white54,
                               letterSpacing: 1.0)),
@@ -145,20 +149,21 @@ class PlanningHubScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlanTypeTag(dynamic type, bool isDark) {
+  Widget _buildPlanTypeTag(
+      BuildContext context, dynamic type, bool isDark, AppStrings s) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.blue.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.flight_takeoff_rounded, size: 12, color: Colors.blue),
-          SizedBox(width: 4),
-          Text('DU LỊCH',
-              style: TextStyle(
+          const Icon(Icons.flight_takeoff_rounded, size: 12, color: Colors.blue),
+          const SizedBox(width: 4),
+          Text(s.getPlanTypeName(type).toUpperCase(),
+              style: const TextStyle(
                   fontSize: 10,
                   color: Colors.blue,
                   fontWeight: FontWeight.w900)),

@@ -2,6 +2,7 @@
 export 'base/glass_container.dart';
 export 'base/ambient_glow.dart';
 export 'base/liquid_background.dart';
+export 'base/shake_widget.dart';
 
 // UI Elements
 export 'elements/styled_text_field.dart';

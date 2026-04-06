@@ -4,25 +4,33 @@ import '../base/glass_container.dart';
 class AppOption {
   final String label;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color? color;
+  final bool enabled;
+  final bool isDestructive;
 
   AppOption({
     required this.label,
     required this.icon,
-    required this.onTap,
+    this.onTap,
     this.color,
+    this.enabled = true,
+    this.isDestructive = false,
   });
 }
 
 class AppOptionsSheet extends StatelessWidget {
   final String title;
+  final String? message;
+  final Color? messageColor;
   final List<AppOption> options;
 
   const AppOptionsSheet({
     super.key,
     required this.title,
     required this.options,
+    this.message,
+    this.messageColor,
   });
 
   @override
@@ -47,6 +55,34 @@ class AppOptionsSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          if (message != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (messageColor ?? Colors.amber).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: (messageColor ?? Colors.amber).withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.security_rounded, color: messageColor ?? Colors.amber, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        message!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: messageColor ?? Colors.amber,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Text(
             title.toUpperCase(),
             style: TextStyle(
@@ -59,25 +95,34 @@ class AppOptionsSheet extends StatelessWidget {
           const SizedBox(height: 16),
           ...options.map((option) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: option.onTap,
-              borderRadius: BorderRadius.circular(16),
-              child: GlassContainer(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                child: Row(
-                  children: [
-                    Icon(option.icon, color: option.color ?? Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 16),
-                    Text(
-                      option.label,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+            child: Opacity(
+              opacity: option.enabled ? 1.0 : 0.3,
+              child: InkWell(
+                onTap: option.enabled ? option.onTap : null,
+                borderRadius: BorderRadius.circular(16),
+                child: GlassContainer(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  child: Row(
+                    children: [
+                      Icon(
+                        option.icon, 
+                        color: option.isDestructive 
+                            ? Colors.redAccent 
+                            : (option.color ?? Theme.of(context).colorScheme.primary)
                       ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white24),
-                  ],
+                      const SizedBox(width: 16),
+                      Text(
+                        option.label,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: option.isDestructive ? Colors.redAccent : null,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white24),
+                    ],
+                  ),
                 ),
               ),
             ),

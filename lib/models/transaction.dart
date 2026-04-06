@@ -1,15 +1,7 @@
-import 'package:uuid/uuid.dart';
 
-enum Category {
-  food,
-  drink,
-  shopping,
-  transport,
-  entertainment,
-  home,
-  health,
-  other
-}
+enum Category { food, drink, shopping, transport, entertainment, home, health, other, travel, grocery, bills, education }
+
+enum TransactionStatus { pending, confirmed, rejected }
 
 abstract class BaseTransaction {
   final String id;
@@ -19,8 +11,7 @@ abstract class BaseTransaction {
   final DateTime? updatedAt;
   final Category category;
   final bool isPayment;
-  final String? sourceAccountId; // Source Link (Ví VCB, Vàng...)
-  final bool isUnplanned; // Still useful here or just in Personal?
+  final String? sourceAccountId;
 
   BaseTransaction({
     String? id,
@@ -31,18 +22,21 @@ abstract class BaseTransaction {
     this.category = Category.other,
     this.isPayment = false,
     this.sourceAccountId,
-    this.isUnplanned = false,
-  })  : id = id ?? const Uuid().v4(),
+  })  : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         date = date ?? DateTime.now();
 
   Map<String, dynamic> toJson();
 }
 
 class GroupTransaction extends BaseTransaction {
-  final String payerId; // Ai trả
-  final List<String> participants; // Ai chịu (string[])
-  final bool amountChanged; // Legacy or still needed?
+  final String payerId;
+  final List<String> participants;
+  final bool amountChanged;
   final Map<String, double>? customAmounts;
+  final TransactionStatus status;
+  final String? planId;
+  final Map<String, String>? participantBalances;
+  final String? creatorId;
 
   GroupTransaction({
     super.id,
@@ -58,9 +52,10 @@ class GroupTransaction extends BaseTransaction {
     this.customAmounts,
     super.sourceAccountId,
     this.participantBalances,
+    this.planId,
+    this.status = TransactionStatus.confirmed,
+    this.creatorId,
   });
-
-  final Map<String, String>? participantBalances; // Map of UID -> Local AccountID
 
   @override
   Map<String, dynamic> toJson() => {
@@ -77,6 +72,9 @@ class GroupTransaction extends BaseTransaction {
         'customAmounts': customAmounts,
         'sourceAccountId': sourceAccountId,
         'participantBalances': participantBalances,
+        'planId': planId,
+        'status': status.name,
+        'creatorId': creatorId,
         'type': 'GROUP_TRANSACTION',
       };
 
@@ -101,9 +99,16 @@ class GroupTransaction extends BaseTransaction {
         participantBalances: json['participantBalances'] != null
             ? Map<String, String>.from(json['participantBalances'])
             : null,
+        planId: json['planId'],
+        status: TransactionStatus.values.firstWhere(
+          (s) => s.name == json['status'],
+          orElse: () => TransactionStatus.confirmed,
+        ),
+        creatorId: json['creatorId'],
       );
 
   GroupTransaction copyWith({
+    String? id,
     String? description,
     double? amount,
     String? payerId,
@@ -115,27 +120,37 @@ class GroupTransaction extends BaseTransaction {
     Map<String, double>? customAmounts,
     String? sourceAccountId,
     Map<String, String>? participantBalances,
-  }) =>
-      GroupTransaction(
-        id: id,
-        description: description ?? this.description,
-        amount: amount ?? this.amount,
-        payerId: payerId ?? this.payerId,
-        participants: participants ?? this.participants,
-        date: date,
-        updatedAt: updatedAt ?? this.updatedAt,
-        amountChanged: amountChanged ?? this.amountChanged,
-        category: category ?? this.category,
-        isPayment: isPayment ?? this.isPayment,
-        customAmounts: customAmounts ?? this.customAmounts,
-        sourceAccountId: sourceAccountId ?? this.sourceAccountId,
-        participantBalances: participantBalances ?? this.participantBalances,
-      );
+    String? planId,
+    TransactionStatus? status,
+    String? creatorId,
+    DateTime? date,
+  }) {
+    return GroupTransaction(
+      id: id ?? this.id,
+      description: description ?? this.description,
+      amount: amount ?? this.amount,
+      payerId: payerId ?? this.payerId,
+      participants: participants ?? this.participants,
+      updatedAt: updatedAt ?? this.updatedAt,
+      amountChanged: amountChanged ?? this.amountChanged,
+      category: category ?? this.category,
+      isPayment: isPayment ?? this.isPayment,
+      customAmounts: customAmounts ?? this.customAmounts,
+      sourceAccountId: sourceAccountId ?? this.sourceAccountId,
+      participantBalances: participantBalances ?? this.participantBalances,
+      planId: planId ?? this.planId,
+      status: status ?? this.status,
+      creatorId: creatorId ?? this.creatorId,
+      date: date ?? this.date,
+    );
+  }
 }
 
 class PersonalTransaction extends BaseTransaction {
   final String? planId; // FK: Gắn vào kế hoạch nào?
   final String? payerId; // Always me, but kept for model consistency?
+  final String? groupId; // ID of group if shared
+  final bool isShared; // Is this a split/share transaction?
 
   PersonalTransaction({
     super.id,
@@ -144,11 +159,12 @@ class PersonalTransaction extends BaseTransaction {
     super.date,
     super.updatedAt,
     super.category,
-    super.isPayment,
-    super.sourceAccountId,
-    super.isUnplanned,
     this.planId,
     this.payerId,
+    super.isPayment,
+    super.sourceAccountId,
+    this.groupId,
+    this.isShared = false,
   });
 
   @override
@@ -159,11 +175,12 @@ class PersonalTransaction extends BaseTransaction {
         'date': date.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),
         'category': category.name,
+        'planId': planId,
+        'payerId': payerId,
         'isPayment': isPayment,
         'sourceAccountId': sourceAccountId,
-        'planId': planId,
-        'isUnplanned': isUnplanned,
-        'payerId': payerId,
+        'groupId': groupId,
+        'isShared': isShared,
         'type': 'PERSONAL_TRANSACTION',
       };
 
@@ -177,47 +194,42 @@ class PersonalTransaction extends BaseTransaction {
           (c) => c.name == json['category'],
           orElse: () => Category.other,
         ),
+        planId: json['planId'],
+        payerId: json['payerId'],
         isPayment: json['isPayment'] ?? false,
         sourceAccountId: json['sourceAccountId'],
-        planId: json['planId'],
-        isUnplanned: json['isUnplanned'] ?? false,
-        payerId: json['payerId'],
+        groupId: json['groupId'],
+        isShared: json['isShared'] ?? false,
       );
 
   PersonalTransaction copyWith({
+    String? id,
     String? description,
     double? amount,
+    DateTime? date,
     DateTime? updatedAt,
     Category? category,
+    String? planId,
+    String? payerId,
     bool? isPayment,
     String? sourceAccountId,
-    String? planId,
-    bool? isUnplanned,
-    String? payerId,
+    String? groupId,
+    bool? isShared,
   }) =>
       PersonalTransaction(
-        id: id,
+        id: id ?? this.id,
         description: description ?? this.description,
         amount: amount ?? this.amount,
-        date: date,
+        date: date ?? this.date,
         updatedAt: updatedAt ?? this.updatedAt,
         category: category ?? this.category,
+        planId: planId ?? this.planId,
+        payerId: payerId ?? this.payerId,
         isPayment: isPayment ?? this.isPayment,
         sourceAccountId: sourceAccountId ?? this.sourceAccountId,
-        planId: planId ?? this.planId,
-        isUnplanned: isUnplanned ?? this.isUnplanned,
-        payerId: payerId ?? this.payerId,
+        groupId: groupId ?? this.groupId,
+        isShared: isShared ?? this.isShared,
       );
-}
-
-class TransactionFactory {
-  static BaseTransaction fromJson(Map<String, dynamic> json) {
-    if (json['type'] == 'GROUP_TRANSACTION' || (json['participants'] != null && (json['participants'] as List).isNotEmpty)) {
-      return GroupTransaction.fromJson(json);
-    } else {
-      return PersonalTransaction.fromJson(json);
-    }
-  }
 }
 
 class Settlement {
@@ -230,16 +242,4 @@ class Settlement {
     required this.toId,
     required this.amount,
   });
-
-  Map<String, dynamic> toJson() => {
-        'fromId': fromId,
-        'toId': toId,
-        'amount': amount,
-      };
-
-  factory Settlement.fromJson(Map<String, dynamic> json) => Settlement(
-        fromId: json['fromId'],
-        toId: json['toId'],
-        amount: (json['amount'] ?? 0.0).toDouble(),
-      );
 }

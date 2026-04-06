@@ -219,6 +219,20 @@ class MemberCell extends StatelessWidget {
             NumberFormat.currency(locale: 'vi_VN', symbol: '₫'));
       },
       onLongPress: () {
+        if (!state.isOwner) {
+          HapticFeedback.vibrate();
+          // Optionally show a tiny snackbar or just do nothing, 
+          // but for UX, a message is better if they bother to long press.
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(s.understood), // Or a more specific string if available
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
         HapticFeedback.heavyImpact();
         if (person.id == state.me?.id) {
           UIHelpers.showLiquidDialog(

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../models.dart';
+import '../../l10n/strings.dart';
 import '../widgets/common_widgets.dart';
 
 class PlanDetailScreen extends StatelessWidget {
@@ -17,6 +18,7 @@ class PlanDetailScreen extends StatelessWidget {
     final fmt =
         NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
     final cs = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
 
     // Associated transactions for this specific plan
     final planTxs =
@@ -27,53 +29,71 @@ class PlanDetailScreen extends StatelessWidget {
           isDark ? const Color(0xFF0E0E1A) : const Color(0xFFF5F5FF),
       body: Stack(
         children: [
-          const LiquidBackground(),
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildAppBar(context, isDark),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: _buildBudgetHeader(fmt, cs, isDark),
-                ),
-              ),
-              if (plan.referenceLinks.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: SectionLabel(
-                    label: 'THAM KHẢO (TIKTOK/FB)',
-                    icon: Icons.link_rounded,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: _buildLinksSection(isDark),
-                ),
-              ],
-              SliverToBoxAdapter(
-                child: SectionLabel(
-                  label: 'CHI TIÊU CHO KẾ HOẠCH',
-                  icon: Icons.receipt_long_rounded,
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: planTxs.isEmpty
-                    ? const SliverToBoxAdapter(
-                        child: EmptyCard(
-                          message: 'Chưa có khoản chi nào cho kế hoạch này.',
-                          icon: Icons.money_off_rounded,
-                        ),
-                      )
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => _buildTransactionItem(
-                              planTxs[index], fmt, isDark),
-                          childCount: planTxs.length,
+          const Positioned.fill(child: LiquidBackground()),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 800;
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: isWide ? 800 : constraints.maxWidth,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _buildAppBar(context, isDark),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _buildBudgetHeader(fmt, cs, isDark, s),
                         ),
                       ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+                      if (plan.referenceLinks.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: SectionLabel(
+                            label: s.referencesLabel,
+                            icon: Icons.link_rounded,
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _buildLinksSection(isDark, s),
+                        ),
+                      ],
+                      SliverToBoxAdapter(
+                        child: SectionLabel(
+                          label: s.planExpensesLabel,
+                          icon: Icons.receipt_long_rounded,
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: planTxs.isEmpty
+                            ? SliverToBoxAdapter(
+                                child: EmptyCard(
+                                  message: s.noExpensesForPlan,
+                                  icon: Icons.money_off_rounded,
+                                ),
+                              )
+                            : SliverGrid(
+                                gridDelegate:
+                                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 400,
+                                  mainAxisExtent: 80,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                ),
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) => _buildTransactionItem(
+                                      planTxs[index], fmt, isDark),
+                                  childCount: planTxs.length,
+                                ),
+                              ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -95,7 +115,8 @@ class PlanDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetHeader(NumberFormat fmt, ColorScheme cs, bool isDark) {
+  Widget _buildBudgetHeader(
+      NumberFormat fmt, ColorScheme cs, bool isDark, AppStrings s) {
     final progress =
         plan.currentSpent / (plan.budgetTotal > 0 ? plan.budgetTotal : 1);
 
@@ -108,15 +129,15 @@ class PlanDetailScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildBudgetItem(
-                  'DỰ TRÙ TỔNG', fmt.format(plan.budgetTotal), isDark),
+                  s.estimatedBudget, fmt.format(plan.budgetTotal), isDark, s),
               _buildBudgetItem(
-                  'THỰC CHI', fmt.format(plan.currentSpent), isDark,
+                  s.actualSpent, fmt.format(plan.currentSpent), isDark, s,
                   color: Colors.orangeAccent),
             ],
           ),
           const SizedBox(height: 24),
           Text(
-            'TIẾN ĐỘ NGÂN SÁCH',
+            s.budgetProgress,
             style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
@@ -149,7 +170,7 @@ class PlanDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetItem(String label, String value, bool isDark,
+  Widget _buildBudgetItem(String label, String value, bool isDark, AppStrings s,
       {Color? color}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +192,7 @@ class PlanDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLinksSection(bool isDark) {
+  Widget _buildLinksSection(bool isDark, AppStrings s) {
     return SizedBox(
       height: 60,
       child: ListView.builder(
@@ -185,7 +206,7 @@ class PlanDetailScreen extends StatelessWidget {
               avatar: const Icon(Icons.play_circle_fill_rounded,
                   size: 16, color: Colors.blueAccent),
               label: Text(
-                'Link review #${index + 1}',
+                '${s.linkReview} #${index + 1}',
                 style:
                     const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),

@@ -8,6 +8,7 @@ import 'wallet/wallet_screen.dart';
 import 'planning/planning_hub_screen.dart';
 import 'ledger/ledger_screen.dart';
 import '../l10n/strings.dart';
+import '../state/app_state.dart';
 
 class MainTabHub extends StatefulWidget {
   const MainTabHub({super.key});
@@ -57,6 +58,19 @@ class _MainTabHubState extends State<MainTabHub> {
         currentIndex: navState.currentIndex,
         onTap: (index) {
           HapticFeedback.selectionClick();
+          final appState = context.read<AppState>();
+          if (index == 1 && appState.groups.isEmpty) {
+            final s = AppStrings.of(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(s.pleaseCreateGroup),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: cs.error,
+              ),
+            );
+            navState.setTab(0); // Force to Group Management
+            return;
+          }
           navState.setTab(index);
         },
         type: BottomNavigationBarType.fixed,

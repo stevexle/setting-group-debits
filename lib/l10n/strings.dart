@@ -80,6 +80,10 @@ class AppStrings {
     categoryEntertainment: 'Giải trí',
     categoryHome: 'Sinh hoạt',
     categoryHealth: 'Sức khỏe',
+    categoryTravel: 'Du lịch',
+    categoryGrocery: 'Đi chợ',
+    categoryBills: 'Hóa đơn',
+    categoryEducation: 'Học tập',
     categoryOther: 'Khác',
     lockHistory: 'Xóa hạch toán trước khi sửa/xóa giao dịch này.',
     myGroups: 'Nhóm của tôi',
@@ -98,6 +102,14 @@ class AppStrings {
     totalMismatch: 'Tổng tiền không khớp!',
     remainingBalance: 'Còn lại',
     amountMismatch: 'Chênh lệch',
+    receivingFrom: 'Nhận từ',
+    settlingTo: 'Gửi đến',
+    options: 'Tùy chọn',
+    viewDetails: 'Xem chi tiết',
+    editPermissionDenied: 'Chỉ người tạo mới có quyền sửa giao dịch này.',
+    cannotEditConfirmed: 'Giao dịch đã xác nhận không thể sửa.',
+    cannotEditHachToan: 'Giao dịch đã hạch toán vào ví không thể sửa.',
+    cannotEditSettled: 'Giao dịch trước đợt thanh toán đã chốt sổ.',
     recordToWallet: 'Hạch toán vào ví của tôi',
     recordedTo: 'Đã hạch toán vào: ',
     edited: 'ĐÃ SỬA',
@@ -129,7 +141,11 @@ class AppStrings {
     newGroup: 'Nhóm mới',
     groupNameHint: 'Ví dụ: Đi chơi Đà Lạt',
     create: 'Tạo',
+    leaveGroupConfirm: 'Rời nhóm?',
+    leaveGroupMsg: 'Bạn có chắc chắn muốn rời khỏi nhóm "{name}"?',
     cannotDeleteLastGroup: 'Không thể xóa nhóm cuối cùng.',
+    selectPlan: 'Chọn kế hoạch',
+    none: 'Không chọn',
     outstandingDebtsError: 'Nhóm này vẫn còn nợ chưa trả. Hãy hoàn tất hạch toán trước khi xóa nhóm.',
     deleteGroupTitle: 'Xóa nhóm?',
     deleteGroupConfirmMsg: 'Bạn có chắc chắn muốn xóa nhóm "{name}"? Hành động này không thể hoàn tác.',
@@ -143,6 +159,7 @@ class AppStrings {
     totalNetWorth: 'Tổng tài sản',
     totalNetWorthLabel: 'TỔNG TÀI SẢN RÒNG',
     addAccountTitle: 'Thêm Tài Khoản Mới',
+    editAccountTitle: 'Chỉnh sửa tài khoản',
     accountNameHint: 'Tên tài khoản (vD: VCB, MoMo, Tiền mặt)',
     initialBalanceHint: 'Số dư hiện tại (₫)',
     accountTypeLabel: 'LOẠI TÀI KHOẢN',
@@ -173,8 +190,21 @@ class AppStrings {
     noCashFlow: 'Chưa có dũ liệu dòng tiền. Mọi chi tiêu sẽ hiện ở đây!',
     groupTypeSettlement: 'Chia tiền',
     groupTypePlanning: 'Kế hoạch/Du lịch',
-    groupTypeAsset: 'Tài sản chung',
     groupTypeLabel: 'LOẠI NHÓM',
+    noPlansMsg: 'Bạn chưa có kế hoạch nào. Hãy lập kế hoạch cho chuyến đi hoặc sự kiện sắp tới!',
+    estimatedBudget: 'DỰ TRÙ',
+    actualSpent: 'THỰC CHI',
+    tripLabel: 'DU LỊCH',
+    viewWallet: 'XEM VÍ',
+    budgetProgress: 'TIẾN ĐỘ NGÂN SÁCH',
+    referencesLabel: 'THAM KHẢO (TIKTOK/FB)',
+    planExpensesLabel: 'CHI TIÊU CHO KẾ HOẠCH',
+    noExpensesForPlan: 'Chưa có khoản chi nào cho kế hoạch này.',
+    linkReview: 'Link review',
+    planTypeTrip: 'Du lịch',
+    planTypeEvent: 'Sự kiện',
+    planTypeLiving: 'Sinh hoạt',
+    planTypeOther: 'Khác',
     analysisOverview: 'BÁO CÁO TỔNG QUAN',
     planningOverview: 'QUẢN LÝ KẾ HOẠCH',
     vcbScan: 'Quét QR VCB',
@@ -184,8 +214,15 @@ class AppStrings {
     continueAnyway: 'Bạn vẫn muốn tiếp tục?',
     proceed: 'Tiếp tục',
     chooseAction: 'Chọn hành động',
-    viewDetails: 'Xem chi tiết',
     deletedExpense: 'Đã xóa giao dịch',
+    pleaseCreateGroup: 'Vui lòng tạo nhóm để bắt đầu sử dụng BillShare',
+    needsConfirmation: 'Cần xác nhận',
+    waitingForYou: 'Đang chờ bạn xác nhận',
+    waitingForRecipient: 'Đang chờ người nhận...',
+    reject: 'Từ chối',
+    confirmBalance: 'Xác nhận',
+    selectAccountIn: 'Chọn tài khoản nhận tiền',
+    confirmWithoutAccount: 'Xác nhận (không vào ví)',
   );
 
   static const _en = AppStrings._(
@@ -261,6 +298,10 @@ class AppStrings {
     categoryEntertainment: 'Entertainment',
     categoryHome: 'Home',
     categoryHealth: 'Health',
+    categoryTravel: 'Travel',
+    categoryGrocery: 'Grocery',
+    categoryBills: 'Bills',
+    categoryEducation: 'Education',
     categoryOther: 'Other',
     lockHistory: 'Delete settlement records before editing/deleting expenses.',
     myGroups: 'My Groups',
@@ -279,6 +320,14 @@ class AppStrings {
     totalMismatch: 'Total amount mismatch!',
     remainingBalance: 'Remaining',
     amountMismatch: 'Mismatch',
+    receivingFrom: 'Received from',
+    settlingTo: 'Settled to',
+    options: 'Options',
+    viewDetails: 'View Details',
+    editPermissionDenied: 'Only the creator can edit this transaction.',
+    cannotEditConfirmed: 'Confirmed transactions cannot be edited.',
+    cannotEditHachToan: 'Recorded transactions in wallet cannot be edited.',
+    cannotEditSettled: 'Transactions before the last payment are locked.',
     recordToWallet: 'Record to my wallet',
     recordedTo: 'Recorded to: ',
     edited: 'EDITED',
@@ -310,7 +359,11 @@ class AppStrings {
     newGroup: 'New Group',
     groupNameHint: 'e.g. Travel',
     create: 'Create',
+    leaveGroupConfirm: 'Leave group?',
+    leaveGroupMsg: 'Are you sure you want to leave "{name}"?',
     cannotDeleteLastGroup: 'Cannot delete the last group.',
+    selectPlan: 'Select plan',
+    none: 'None',
     outstandingDebtsError: 'This group has outstanding debts. Please settle all expenses before deleting.',
     deleteGroupTitle: 'Delete Group?',
     deleteGroupConfirmMsg: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
@@ -324,7 +377,8 @@ class AppStrings {
     totalNetWorth: 'Total Net Worth',
     totalNetWorthLabel: 'TOTAL NET WORTH',
     addAccountTitle: 'Add New Account',
-    accountNameHint: 'Account name (e.g. VCB, MoMo, Cash)',
+    editAccountTitle: 'Edit Account',
+    accountNameHint: 'Account name (e.g. VCB, Cash)',
     initialBalanceHint: 'Current balance (₫)',
     accountTypeLabel: 'ACCOUNT TYPE',
     saveAccount: 'Save Account',
@@ -354,8 +408,21 @@ class AppStrings {
     noCashFlow: 'No cash flow data yet. All transactions will appear here!',
     groupTypeSettlement: 'Settlement',
     groupTypePlanning: 'Planning/Trip',
-    groupTypeAsset: 'Shared Assets',
     groupTypeLabel: 'GROUP TYPE',
+    noPlansMsg: 'You have no plans yet. Let\'s plan for your next trip or event!',
+    estimatedBudget: 'ESTIMATED',
+    actualSpent: 'ACTUAL',
+    tripLabel: 'TRIP',
+    viewWallet: 'VIEW WALLET',
+    budgetProgress: 'BUDGET PROGRESS',
+    referencesLabel: 'REFERENCES (TIKTOK/FB)',
+    planExpensesLabel: 'PLAN EXPENSES',
+    noExpensesForPlan: 'No expenses for this plan yet.',
+    linkReview: 'Link review',
+    planTypeTrip: 'Trip',
+    planTypeEvent: 'Event',
+    planTypeLiving: 'Living',
+    planTypeOther: 'Other',
     analysisOverview: 'OVERVIEW REPORT',
     planningOverview: 'PLAN MANAGEMENT',
     vcbScan: 'VCB QR Scan',
@@ -365,16 +432,16 @@ class AppStrings {
     continueAnyway: 'Do you still want to proceed?',
     proceed: 'Proceed',
     chooseAction: 'Choose action',
-    viewDetails: 'View details',
     deletedExpense: 'Deleted transaction',
+    pleaseCreateGroup: 'Please create a group to start using BillShare',
+    needsConfirmation: 'Needs Confirmation',
+    waitingForYou: 'Waiting for your confirmation',
+    waitingForRecipient: 'Waiting for recipient...',
+    reject: 'Reject',
+    confirmBalance: 'Confirm',
+    selectAccountIn: 'Select income account',
+    confirmWithoutAccount: 'Confirm (no wallet)',
   );
-
-  final String vcbScan;
-  final String vcbScanHint;
-  final String insufficientBalance;
-  final String insufficientBalanceMsg;
-  final String continueAnyway;
-  final String proceed;
 
   final String appTitle;
   final String members;
@@ -448,6 +515,10 @@ class AppStrings {
   final String categoryEntertainment;
   final String categoryHome;
   final String categoryHealth;
+  final String categoryTravel;
+  final String categoryGrocery;
+  final String categoryBills;
+  final String categoryEducation;
   final String categoryOther;
   final String lockHistory;
   final String myGroups;
@@ -466,6 +537,14 @@ class AppStrings {
   final String totalMismatch;
   final String remainingBalance;
   final String amountMismatch;
+  final String receivingFrom;
+  final String settlingTo;
+  final String options;
+  final String viewDetails;
+  final String editPermissionDenied;
+  final String cannotEditConfirmed;
+  final String cannotEditHachToan;
+  final String cannotEditSettled;
   final String recordToWallet;
   final String recordedTo;
   final String edited;
@@ -497,7 +576,11 @@ class AppStrings {
   final String newGroup;
   final String groupNameHint;
   final String create;
+  final String leaveGroupConfirm;
+  final String leaveGroupMsg;
   final String cannotDeleteLastGroup;
+  final String selectPlan;
+  final String none;
   final String outstandingDebtsError;
   final String deleteGroupTitle;
   final String deleteGroupConfirmMsg;
@@ -511,6 +594,7 @@ class AppStrings {
   final String totalNetWorth;
   final String totalNetWorthLabel;
   final String addAccountTitle;
+  final String editAccountTitle;
   final String accountNameHint;
   final String initialBalanceHint;
   final String accountTypeLabel;
@@ -541,13 +625,39 @@ class AppStrings {
   final String noCashFlow;
   final String groupTypeSettlement;
   final String groupTypePlanning;
-  final String groupTypeAsset;
   final String groupTypeLabel;
+  final String noPlansMsg;
+  final String estimatedBudget;
+  final String actualSpent;
+  final String tripLabel;
+  final String viewWallet;
+  final String budgetProgress;
+  final String referencesLabel;
+  final String planExpensesLabel;
+  final String noExpensesForPlan;
+  final String linkReview;
+  final String planTypeTrip;
+  final String planTypeEvent;
+  final String planTypeLiving;
+  final String planTypeOther;
   final String analysisOverview;
   final String planningOverview;
+  final String vcbScan;
+  final String vcbScanHint;
+  final String insufficientBalance;
+  final String insufficientBalanceMsg;
+  final String continueAnyway;
+  final String proceed;
   final String chooseAction;
-  final String viewDetails;
   final String deletedExpense;
+  final String pleaseCreateGroup;
+  final String needsConfirmation;
+  final String waitingForYou;
+  final String waitingForRecipient;
+  final String reject;
+  final String confirmBalance;
+  final String selectAccountIn;
+  final String confirmWithoutAccount;
 
   const AppStrings._({
     required this.appTitle,
@@ -622,6 +732,10 @@ class AppStrings {
     required this.categoryEntertainment,
     required this.categoryHome,
     required this.categoryHealth,
+    required this.categoryTravel,
+    required this.categoryGrocery,
+    required this.categoryBills,
+    required this.categoryEducation,
     required this.categoryOther,
     required this.lockHistory,
     required this.myGroups,
@@ -640,6 +754,14 @@ class AppStrings {
     required this.totalMismatch,
     required this.remainingBalance,
     required this.amountMismatch,
+    required this.receivingFrom,
+    required this.settlingTo,
+    required this.options,
+    required this.viewDetails,
+    required this.editPermissionDenied,
+    required this.cannotEditConfirmed,
+    required this.cannotEditHachToan,
+    required this.cannotEditSettled,
     required this.recordToWallet,
     required this.recordedTo,
     required this.edited,
@@ -671,7 +793,11 @@ class AppStrings {
     required this.newGroup,
     required this.groupNameHint,
     required this.create,
+    required this.leaveGroupConfirm,
+    required this.leaveGroupMsg,
     required this.cannotDeleteLastGroup,
+    required this.selectPlan,
+    required this.none,
     required this.outstandingDebtsError,
     required this.deleteGroupTitle,
     required this.deleteGroupConfirmMsg,
@@ -685,6 +811,7 @@ class AppStrings {
     required this.totalNetWorth,
     required this.totalNetWorthLabel,
     required this.addAccountTitle,
+    required this.editAccountTitle,
     required this.accountNameHint,
     required this.initialBalanceHint,
     required this.accountTypeLabel,
@@ -715,8 +842,21 @@ class AppStrings {
     required this.noCashFlow,
     required this.groupTypeSettlement,
     required this.groupTypePlanning,
-    required this.groupTypeAsset,
     required this.groupTypeLabel,
+    required this.noPlansMsg,
+    required this.estimatedBudget,
+    required this.actualSpent,
+    required this.tripLabel,
+    required this.viewWallet,
+    required this.budgetProgress,
+    required this.referencesLabel,
+    required this.planExpensesLabel,
+    required this.noExpensesForPlan,
+    required this.linkReview,
+    required this.planTypeTrip,
+    required this.planTypeEvent,
+    required this.planTypeLiving,
+    required this.planTypeOther,
     required this.analysisOverview,
     required this.planningOverview,
     required this.vcbScan,
@@ -726,12 +866,19 @@ class AppStrings {
     required this.continueAnyway,
     required this.proceed,
     required this.chooseAction,
-    required this.viewDetails,
     required this.deletedExpense,
+    required this.pleaseCreateGroup,
+    required this.needsConfirmation,
+    required this.waitingForYou,
+    required this.waitingForRecipient,
+    required this.reject,
+    required this.confirmBalance,
+    required this.selectAccountIn,
+    required this.confirmWithoutAccount,
   });
 
-  String getCategoryName(Category c) {
-    switch (c) {
+  String getCategoryName(Category cat) {
+    switch (cat) {
       case Category.food:
         return categoryFood;
       case Category.drink:
@@ -746,8 +893,38 @@ class AppStrings {
         return categoryHome;
       case Category.health:
         return categoryHealth;
+      case Category.travel:
+        return categoryTravel;
+      case Category.grocery:
+        return categoryGrocery;
+      case Category.bills:
+        return categoryBills;
+      case Category.education:
+        return categoryEducation;
       case Category.other:
         return categoryOther;
+    }
+  }
+
+  String getPlanTypeName(PlanType type) {
+    switch (type) {
+      case PlanType.trip:
+        return planTypeTrip;
+      case PlanType.event:
+        return planTypeEvent;
+      case PlanType.living:
+        return planTypeLiving;
+      case PlanType.other:
+        return planTypeOther;
+    }
+  }
+
+  String getGroupTypeName(GroupType type) {
+    switch (type) {
+      case GroupType.settlement:
+        return groupTypeSettlement;
+      case GroupType.planning:
+        return groupTypePlanning;
     }
   }
 }

@@ -53,12 +53,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
               label: s.addExpense,
               cs: cs,
               onTap: () => _openAddTransaction(context)),
-      appBarActions: [
-        ActionIconButton(
-            icon: Icons.refresh_rounded,
-            onTap: () => _confirmResetGroup(context, s),
-            isDark: isDark),
-      ],
+      appBarActions: [],
       children: [
         const SizedBox(height: 10),
         BillShareStatsCard(
@@ -83,9 +78,10 @@ class _BillShareScreenState extends State<BillShareScreen> {
         const SizedBox(height: 24),
         _buildMembersSection(context, state, s, isDark, cs),
         const SizedBox(height: 16),
-        if (state.settlements.isNotEmpty) ...[
+        if (state.settlements.isNotEmpty || state.hasPendingConfirmations) ...[
           SettleUpCard(
             settlements: state.settlements,
+            hasPendingConfirmations: state.hasPendingConfirmations,
             s: s,
             fmt: fmt,
             onTap: () => Navigator.push(context,
@@ -133,10 +129,11 @@ class _BillShareScreenState extends State<BillShareScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           SectionLabel(label: s.members, icon: Icons.people_alt_rounded),
-          ActionIconButton(
-              icon: Icons.add_rounded,
-              onTap: () => showAddMember(context, s),
-              isDark: isDark),
+          if (state.isOwner)
+            ActionIconButton(
+                icon: Icons.add_rounded,
+                onTap: () => showAddMember(context, s),
+                isDark: isDark),
         ],
       ),
       const SizedBox(height: 12),
@@ -152,7 +149,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
 
   Widget _buildTabSwitcher(
       AppState state, AppStrings s, bool isDark, ColorScheme cs) {
-    final canClearHistory = state.settlements.isEmpty || !state.hasSettlements;
+    final canClearHistory = state.settlements.isEmpty && !state.hasAnyPendingTransactions;
     return Row(
       children: [
         Expanded(
@@ -246,19 +243,6 @@ class _BillShareScreenState extends State<BillShareScreen> {
       map.putIfAbsent(date, () => []).add(tx);
     }
     return map;
-  }
-
-  void _confirmResetGroup(BuildContext context, AppStrings s) {
-    UIHelpers.showLiquidDialog(
-      context: context,
-      title: s.resetGroup,
-      content: Text(s.resetGroupMsg),
-      confirmLabel: s.resetGroup,
-      isDestructive: true,
-      onConfirm: () async {
-        await context.read<AppState>().clearAll();
-      },
-    );
   }
 
   void _confirmClearHistory(BuildContext context, AppStrings s) {

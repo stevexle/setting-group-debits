@@ -6,6 +6,7 @@ import '../../widgets/common_widgets.dart';
 
 class SettleUpCard extends StatelessWidget {
   final List<Settlement> settlements;
+  final bool hasPendingConfirmations;
   final AppStrings s;
   final NumberFormat fmt;
   final VoidCallback onTap;
@@ -13,6 +14,7 @@ class SettleUpCard extends StatelessWidget {
   const SettleUpCard({
     super.key,
     required this.settlements,
+    this.hasPendingConfirmations = false,
     required this.s,
     required this.fmt,
     required this.onTap,
@@ -35,8 +37,11 @@ class SettleUpCard extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.indigo.withValues(alpha: 0.2),
             ),
-            child: const Icon(Icons.auto_awesome_rounded,
-                color: Colors.indigoAccent, size: 24),
+            child: Icon(
+              hasPendingConfirmations ? Icons.notification_important_rounded : Icons.auto_awesome_rounded,
+              color: hasPendingConfirmations ? Colors.orangeAccent : Colors.indigoAccent,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -44,17 +49,19 @@ class SettleUpCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  s.settlement,
+                  hasPendingConfirmations ? s.needsConfirmation : s.settlement,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: hasPendingConfirmations ? Colors.orangeAccent : (isDark ? Colors.white : Colors.black),
                   ),
                 ),
                 Text(
-                  '${settlements.length} ${s.settlementTitle.toLowerCase()}',
+                  hasPendingConfirmations 
+                    ? s.waitingForYou 
+                    : '${settlements.length} ${s.settlementTitle.toLowerCase()}',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white38 : Colors.black38,
                   ),

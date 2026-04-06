@@ -51,104 +51,153 @@ class SettlementScreen extends StatelessWidget {
           isDark ? const Color(0xFF0E0E1A) : const Color(0xFFF5F5FF),
       body: Stack(
         children: [
-          const LiquidBackground(),
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 120,
-                pinned: true,
-                backgroundColor: Colors.transparent,
-                leading: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                ),
-                actions: [
-                  if (settlements.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: IconButton(
-                        onPressed: () =>
-                            _sharePlan(context, state, s, currencyFormat),
-                        icon: const Icon(Icons.share_rounded),
-                      ),
-                    ),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  titlePadding: const EdgeInsets.fromLTRB(56, 0, 56, 16),
-                  title: Text(
-                    s.settlementTitle,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: _buildAlgoInfo(s, isDark, settlements.length),
-                ),
-              ),
-              SliverLayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.crossAxisExtent > 700;
-                  final crossAxisCount = isWide ? 2 : 1;
-
-                  final validSettlements = settlements.where((set) {
-                    return state.people.any((p) => p.id == set.fromId) &&
-                        state.people.any((p) => p.id == set.toId);
-                  }).toList();
-
-                  return SliverPadding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    sliver: validSettlements.isEmpty
-                        ? SliverToBoxAdapter(
-                            child: _buildAllSettled(context, s, isDark))
-                        : SliverGrid(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              mainAxisExtent: 240,
+          const Positioned.fill(child: LiquidBackground()),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 800;
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: isWide ? 800 : constraints.maxWidth,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverAppBar(
+                        expandedHeight: 120,
+                        pinned: true,
+                        backgroundColor: Colors.transparent,
+                        leading: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        ),
+                        actions: [
+                          if (settlements.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: IconButton(
+                                onPressed: () => _sharePlan(
+                                    context, state, s, currencyFormat),
+                                icon: const Icon(Icons.share_rounded),
+                              ),
                             ),
-                            delegate: SliverChildBuilderDelegate(
-                              (ctx, i) {
-                                final set = validSettlements[i];
-                                final from = state.people
-                                    .firstWhere((p) => p.id == set.fromId);
-                                final to = state.people
-                                    .firstWhere((p) => p.id == set.toId);
-                                return _SettlementCard(
-                                  from: from,
-                                  to: to,
-                                  amount: set.amount,
-                                  currencyFormat: currencyFormat,
-                                  onSettle: () {
-                                    final involvement = (set.fromId == (state.me?.id ?? '') || set.toId == (state.me?.id ?? ''));
-                                    if (involvement && state.accounts.isNotEmpty) {
-                                      _showAccountPicker(context, state, set);
-                                    } else {
-                                      state.settleDebt(
-                                          set.fromId, set.toId, set.amount,
-                                          shouldClear: false);
-                                    }
-                                  },
-                                  s: s,
-                                  isDark: isDark,
-                                );
-                              },
-                              childCount: validSettlements.length,
+                        ],
+                        flexibleSpace: FlexibleSpaceBar(
+                          titlePadding: const EdgeInsets.fromLTRB(56, 0, 56, 16),
+                          title: Text(
+                            s.settlementTitle,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1A1A2E),
                             ),
                           ),
-                  );
-                },
-              ),
-            ],
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          child: _buildAlgoInfo(s, isDark, settlements.length),
+                        ),
+                      ),
+                      SliverLayoutBuilder(
+                        builder: (context, sliverConstraints) {
+                          final isWideGrid =
+                              sliverConstraints.crossAxisExtent > 700;
+                          final crossAxisCount = isWideGrid ? 2 : 1;
+
+                          final validSettlements = settlements.where((set) {
+                            return state.people.any((p) => p.id == set.fromId) &&
+                                state.people.any((p) => p.id == set.toId);
+                          }).toList();
+
+                          return SliverPadding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            sliver: validSettlements.isEmpty
+                                ? SliverToBoxAdapter(
+                                    child: _buildAllSettled(context, s, isDark))
+                                : SliverGrid(
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      mainAxisExtent: 240,
+                                    ),
+                                    delegate: SliverChildBuilderDelegate(
+                                      (ctx, i) {
+                                        final set = validSettlements[i];
+                                        final from = state.people.firstWhere(
+                                            (p) => p.id == set.fromId);
+                                        final to = state.people.firstWhere(
+                                            (p) => p.id == set.toId);
+                                        return _SettlementCard(
+                                          from: from,
+                                          to: to,
+                                          amount: set.amount,
+                                          currencyFormat: currencyFormat,
+                                          onSettle: () {
+                                            final involvement = (set.fromId ==
+                                                    (state.me?.id ?? '') ||
+                                                set.toId ==
+                                                    (state.me?.id ?? ''));
+                                            if (involvement &&
+                                                state.accounts.isNotEmpty) {
+                                              _showAccountPicker(
+                                                  context, state, set);
+                                            } else {
+                                              state.settleDebt(
+                                                  set.fromId,
+                                                  set.toId,
+                                                  set.amount,
+                                                  shouldClear: false);
+                                            }
+                                          },
+                                          s: s,
+                                          isDark: isDark,
+                                        );
+                                      },
+                                      childCount: validSettlements.length,
+                                    ),
+                                  ),
+                          );
+                        },
+                      ),
+                      // Pending Confirmations Section
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        sliver: SliverToBoxAdapter(
+                          child: Consumer<AppState>(
+                            builder: (context, state, _) {
+                              final pending = state.groupTransactions.where((t) =>
+                                  t.isPayment &&
+                                  t.status == TransactionStatus.pending).toList();
+                              
+                              if (pending.isEmpty) return const SizedBox.shrink();
+                              
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SectionLabel(
+                                    label: s.needsConfirmation,
+                                    icon: Icons.pending_actions_rounded,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ...pending.map((tx) => _PendingSettlementCard(tx: tx, isDark: isDark, s: s, fmt: currencyFormat)),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -319,42 +368,57 @@ class _SettlementCard extends StatelessWidget {
   }
 
   Widget _buildActions(BuildContext context, Color accentColor) {
+    final state = context.read<AppState>();
+    final myId = state.me?.id ?? '';
+    final isPayer = myId == from.id;
+    final isRecipient = myId == to.id;
+    final isPhantomPayer = from.userId == null || from.userId!.isEmpty;
+
+    // Can settle if: I am the payer, OR if I am the recipient and the payer is a phantom (manual member)
+    final canClickSettle = isPayer || (isRecipient && isPhantomPayer);
+
     return Row(
       children: [
         Expanded(
-          child: FilledButton(
-            onPressed: onSettle,
-            style: FilledButton.styleFrom(
-              backgroundColor: accentColor,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Opacity(
+            opacity: canClickSettle ? 1.0 : 0.4,
+            child: FilledButton(
+              onPressed: canClickSettle ? onSettle : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: accentColor,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Text(s.settleNow,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  )),
             ),
-            child: Text(s.settleNow,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                )),
           ),
         ),
         const SizedBox(width: 8),
         _ActionSmallButton(
-          onPressed: () {
-            context.read<AppState>().remindPerson(from.id, amount);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(s.remindedUser.replaceAll('{name}', from.name),
-                    style: const TextStyle(fontSize: 13)),
-                behavior: SnackBarBehavior.floating,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            );
-          },
-          icon: Icons.notifications_active_rounded,
+          onPressed: isPayer
+              ? () {} // Payer doesn't remind themselves
+              : () {
+                  state.remindPerson(from.id, amount);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(s.remindedUser.replaceAll('{name}', from.name),
+                          style: const TextStyle(fontSize: 13)),
+                      behavior: SnackBarBehavior.floating,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+          icon: isPayer ? Icons.info_outline_rounded : Icons.notifications_active_rounded,
           isDark: isDark,
+          enabled: !isPayer && !isPhantomPayer, // Don't remind phantoms
         ),
       ],
     );
@@ -365,8 +429,9 @@ class _ActionSmallButton extends StatelessWidget {
   final VoidCallback onPressed;
   final IconData icon;
   final bool isDark;
+  final bool enabled;
   const _ActionSmallButton(
-      {required this.onPressed, required this.icon, required this.isDark});
+      {required this.onPressed, required this.icon, required this.isDark, this.enabled = true});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -378,10 +443,13 @@ class _ActionSmallButton extends StatelessWidget {
               ? Colors.white.withValues(alpha: 0.05)
               : Colors.black.withValues(alpha: 0.05),
         ),
-        child: IconButton(
-          onPressed: onPressed,
-          icon: Icon(icon,
-              size: 18, color: isDark ? Colors.white70 : Colors.black54),
+        child: Opacity(
+          opacity: enabled ? 1.0 : 0.3,
+          child: IconButton(
+            onPressed: enabled ? onPressed : null,
+            icon: Icon(icon,
+                size: 18, color: isDark ? Colors.white70 : Colors.black54),
+          ),
         ),
       );
 }
@@ -435,6 +503,135 @@ class _Avatar extends StatelessWidget {
               color: isDark ? Colors.white70 : Colors.black87,
             )),
       ],
+    );
+  }
+}
+
+class _PendingSettlementCard extends StatelessWidget {
+  final GroupTransaction tx;
+  final bool isDark;
+  final AppStrings s;
+  final NumberFormat fmt;
+
+  const _PendingSettlementCard({
+    required this.tx,
+    required this.isDark,
+    required this.s,
+    required this.fmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final from = state.people.firstWhere((p) => p.id == tx.payerId,
+        orElse: () => Person(name: '?', colorIndex: 0));
+    final to = state.people.firstWhere((p) => p.id == tx.participants.first,
+        orElse: () => Person(name: '?', colorIndex: 0));
+    
+    final isMeRecipient = tx.participants.contains(state.me?.id);
+    final statusColor = isMeRecipient ? Colors.orangeAccent : Colors.white38;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                _Avatar(person: from, isDark: isDark),
+                const SizedBox(width: 12),
+                const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white24),
+                const SizedBox(width: 12),
+                _Avatar(person: to, isDark: isDark),
+                const Spacer(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(fmt.format(tx.amount),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w900)),
+                    Text(isMeRecipient ? s.waitingForYou : s.waitingForRecipient,
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: statusColor)),
+                  ],
+                ),
+              ],
+            ),
+            if (isMeRecipient) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => state.rejectSettlement(tx.id),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(s.reject),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => _confirmWithAccount(context, state),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(s.confirmBalance),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmWithAccount(BuildContext context, AppState state) {
+    if (state.accounts.isEmpty) {
+      state.confirmSettlement(tx.id);
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => GlassContainer(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(s.selectAccountIn,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 20),
+            ...state.accounts.map((acc) => ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_rounded, color: Colors.blueAccent),
+                  title: Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    state.confirmSettlement(tx.id, targetAccountId: acc.id);
+                  },
+                )),
+            ListTile(
+              leading: const Icon(Icons.close_rounded),
+              title: Text(state.accounts.isEmpty ? s.confirmWithoutAccount : s.noHistoryForAccount),
+              onTap: () {
+                Navigator.pop(ctx);
+                state.confirmSettlement(tx.id);
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 }

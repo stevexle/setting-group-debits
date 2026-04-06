@@ -1,21 +1,23 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../models.dart';
 import '../../l10n/strings.dart';
-import '../ui_helpers.dart';
 import '../widgets/common_widgets.dart';
 
 class AddAccountModal extends StatefulWidget {
-  const AddAccountModal({super.key});
+  final Account? initialAccount;
+  const AddAccountModal({super.key, this.initialAccount});
 
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context, {Account? initialAccount}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const AddAccountModal(),
+      builder: (_) => AddAccountModal(initialAccount: initialAccount),
     );
   }
 
@@ -27,6 +29,19 @@ class _AddAccountModalState extends State<AddAccountModal> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
   AccountType _selectedType = AccountType.bank;
+
+  bool get _isEditing => widget.initialAccount != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final acc = widget.initialAccount!;
+      _nameController.text = acc.name;
+      _selectedType = acc.type;
+      _balanceController.text = NumberFormat('#,###', 'en_US').format(acc.currentBalance);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +106,7 @@ class _AddAccountModalState extends State<AddAccountModal> {
                             ),
                           ),
                           Text(
-                            s.addAccountTitle,
+                            _isEditing ? s.editAccountTitle : s.addAccountTitle,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -189,30 +204,35 @@ class _AddAccountModalState extends State<AddAccountModal> {
 
   Widget _buildBalanceField(
       {required bool isDark, required ColorScheme cs, required AppStrings s}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.03)
-            : Colors.black.withValues(alpha: 0.02),
-        border:
-            Border.all(color: cs.primary.withValues(alpha: 0.1), width: 1.5),
-      ),
-      child: TextFormField(
-        controller: _balanceController,
-        keyboardType: const TextInputType.numberWithOptions(decimal: false),
-        inputFormatters: [CurrencyInputFormatter()],
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w900,
-          color: cs.primary,
+    return Opacity(
+      opacity: _isEditing ? 0.6 : 1.0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.02),
+          border:
+              Border.all(color: cs.primary.withValues(alpha: 0.1), width: 1.5),
         ),
-        decoration: InputDecoration(
-          hintText: s.initialBalanceHint,
-          border: InputBorder.none,
-          prefixIcon: Icon(Icons.bolt_rounded, color: cs.primary, size: 20),
+        child: TextFormField(
+          controller: _balanceController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: false),
+          inputFormatters: [CurrencyInputFormatter()],
+          textAlign: TextAlign.center,
+          enabled: !_isEditing,
+          readOnly: _isEditing,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+            color: cs.primary,
+          ),
+          decoration: InputDecoration(
+            hintText: s.initialBalanceHint,
+            border: InputBorder.none,
+            prefixIcon: Icon(Icons.bolt_rounded, color: cs.primary, size: 20),
+          ),
         ),
       ),
     );
@@ -254,14 +274,36 @@ class _AddAccountModalState extends State<AddAccountModal> {
 
     if (name.isEmpty) return;
 
-    final account = Account(
-      name: name,
-      type: _selectedType,
-      initialBalance: balance,
-      currentBalance: balance,
-    );
-
-    context.read<AppState>().addAccount(account);
+    if (_isEditing) {
+      final account = widget.initialAccount!.copyWith(
+        name: name,
+        type: _selectedType,
+      );
+      context.read<AppState>().updateAccount(account);
+    } else {
+      final account = Account(
+        name: name,
+        type: _selectedType,
+        initialBalance: balance,
+        currentBalance: balance,
+      );
+      context.read<AppState>().addAccount(account);
+    }
     Navigator.pop(context);
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue.copyWith(text: '');
+    String cleaned = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (cleaned.isEmpty) return const TextEditingValue(text: '');
+    final number = int.parse(cleaned);
+    final formatted = NumberFormat('#,###', 'en_US').format(number);
+    return newValue.copyWith(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length));
   }
 }

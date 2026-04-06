@@ -290,7 +290,7 @@ class TransactionDetailModal extends StatelessWidget {
             onSelected: (acc) {
               state.linkGroupTransactionToWallet(gtx.id, acc.id);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Đã hạch toán vào ví!")),
+                SnackBar(content: Text(s.settleDone)),
               );
             },
           );

@@ -167,6 +167,7 @@ class AppStrings {
     historyLabel: 'BIẾN ĐỘNG SỐ DƯ',
     currentBalanceLabel: 'SỐ DƯ HIỆN TẠI',
     noHistoryForAccount: 'Chưa có biến động số dư cho tài khoản này.',
+    noAccountsMsg: 'Chưa có tài khoản nào. Hãy thêm ngân hàng hoặc ví tiền mặt!',
     addPlanTitle: 'Lập Kế Hoạch Mới',
     planTitleHint: 'Tên kế hoạch (vD: Du lịch Đà Lạt, Mua ô tô)',
     budgetHint: 'Tổng dự trù ngân sách (₫)',
@@ -385,6 +386,7 @@ class AppStrings {
     historyLabel: 'TRANSACTION HISTORY',
     currentBalanceLabel: 'CURRENT BALANCE',
     noHistoryForAccount: 'No transaction history for this account.',
+    noAccountsMsg: 'No accounts yet. Add your bank or cash wallet!',
     addPlanTitle: 'Create New Plan',
     planTitleHint: 'Plan title (e.g. Vacation, Car)',
     budgetHint: 'Total budget (₫)',
@@ -602,6 +604,7 @@ class AppStrings {
   final String historyLabel;
   final String currentBalanceLabel;
   final String noHistoryForAccount;
+  final String noAccountsMsg;
   final String addPlanTitle;
   final String planTitleHint;
   final String budgetHint;
@@ -819,6 +822,7 @@ class AppStrings {
     required this.historyLabel,
     required this.currentBalanceLabel,
     required this.noHistoryForAccount,
+    required this.noAccountsMsg,
     required this.addPlanTitle,
     required this.planTitleHint,
     required this.budgetHint,

@@ -79,8 +79,8 @@ class SettleUpCard extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Paid',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+            child: Text(s.settleNow,
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
           ),
         ],
       ),

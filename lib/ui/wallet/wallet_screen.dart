@@ -44,8 +44,7 @@ class WalletScreen extends StatelessWidget {
         const SizedBox(height: 12),
         if (accounts.isEmpty)
           EmptyCard(
-            message:
-                'Chưa có tài khoản nào. Hãy thêm ngân hàng hoặc ví tiền mặt của bạn!',
+            message: s.noAccountsMsg,
             icon: Icons.add_card_rounded,
           )
         else

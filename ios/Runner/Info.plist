@@ -70,6 +70,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to scan QR codes for group invites.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

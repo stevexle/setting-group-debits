@@ -142,7 +142,13 @@ class AppStrings {
     groupNameHint: 'Ví dụ: Đi chơi Đà Lạt',
     create: 'Tạo',
     leaveGroupConfirm: 'Rời nhóm?',
-    leaveGroupMsg: 'Bạn có chắc chắn muốn rời khỏi nhóm "{name}"?',
+    leaveGroupMsg: 'Bạn có chắc chắn muốn rời khỏi nhóm này?',
+    shareQR: 'Chia sẻ QR',
+    scanQR: 'Quét mã QR',
+    inviteQRTitle: 'Mã mời tham gia nhóm',
+    scanToJoin: 'Quét mã này để gia nhập nhóm cực nhanh!',
+    cameraPermission: 'Vui lòng cấp quyền truy cập Camera',
+    invalidQRCode: 'Mã QR không hợp lệ',
     cannotDeleteLastGroup: 'Không thể xóa nhóm cuối cùng.',
     selectPlan: 'Chọn kế hoạch',
     none: 'Không chọn',
@@ -361,7 +367,13 @@ class AppStrings {
     groupNameHint: 'e.g. Travel',
     create: 'Create',
     leaveGroupConfirm: 'Leave group?',
-    leaveGroupMsg: 'Are you sure you want to leave "{name}"?',
+    leaveGroupMsg: 'Are you sure you want to leave this group?',
+    shareQR: 'Share QR',
+    scanQR: 'Scan QR',
+    inviteQRTitle: 'Group Invite QR',
+    scanToJoin: 'Scan this QR to join the group instantly!',
+    cameraPermission: 'Please grant Camera permission',
+    invalidQRCode: 'Invalid QR Code',
     cannotDeleteLastGroup: 'Cannot delete the last group.',
     selectPlan: 'Select plan',
     none: 'None',
@@ -580,6 +592,12 @@ class AppStrings {
   final String create;
   final String leaveGroupConfirm;
   final String leaveGroupMsg;
+  final String shareQR;
+  final String scanQR;
+  final String inviteQRTitle;
+  final String scanToJoin;
+  final String cameraPermission;
+  final String invalidQRCode;
   final String cannotDeleteLastGroup;
   final String selectPlan;
   final String none;
@@ -798,6 +816,12 @@ class AppStrings {
     required this.create,
     required this.leaveGroupConfirm,
     required this.leaveGroupMsg,
+    required this.shareQR,
+    required this.scanQR,
+    required this.inviteQRTitle,
+    required this.scanToJoin,
+    required this.cameraPermission,
+    required this.invalidQRCode,
     required this.cannotDeleteLastGroup,
     required this.selectPlan,
     required this.none,

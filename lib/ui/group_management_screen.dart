@@ -7,6 +7,8 @@ import '../models.dart';
 import '../l10n/strings.dart';
 import 'ui_helpers.dart';
 import 'widgets/common_widgets.dart';
+import 'widgets/elements/qr_scanner_modal.dart';
+import 'widgets/elements/invite_qr_modal.dart';
 
 class GroupManagementScreen extends StatefulWidget {
   const GroupManagementScreen({super.key});
@@ -84,38 +86,16 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
               label: _isJoining ? '${s.join}...' : s.join,
               icon: _isJoining ? Icons.hourglass_top_rounded : Icons.login_rounded,
               color: _isJoining ? cs.outline : cs.primary,
-              onTap: _isJoining ? () {} : () async {
-                final id = _idController.text.trim();
-                if (id.isNotEmpty) {
-                  setState(() => _isJoining = true);
-                  try {
-                    await state.joinSyncGroup(id);
-                    if (context.mounted) {
-                      context.read<TabNavigationState>().setTab(1);
-                    }
-                  } catch (e) {
-                    HapticFeedback.vibrate();
-                    _shakeKey.currentState?.shake();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(Icons.error_outline_rounded, color: Colors.white),
-                            const SizedBox(width: 12),
-                            Text(s.failedToJoin, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                    );
-                  } finally {
-                    if (mounted) setState(() => _isJoining = false);
-                  }
-                }
-              },
+              onTap: _isJoining ? () {} : () => _joinGroup(state, s),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: () => _scanQRCode(context, state, s),
+              style: IconButton.styleFrom(
+                backgroundColor: cs.primary.withValues(alpha: 0.1),
+                padding: const EdgeInsets.all(12),
+              ),
             ),
           ],
         ),
@@ -132,6 +112,53 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         ),
       ],
     );
+  }
+
+  void _joinGroup(AppState state, AppStrings s) async {
+    final id = _idController.text.trim();
+    if (id.isEmpty) return;
+
+    setState(() => _isJoining = true);
+    try {
+      await state.joinSyncGroup(id);
+      if (mounted) {
+        context.read<TabNavigationState>().setTab(1);
+      }
+    } catch (e) {
+      HapticFeedback.vibrate();
+      _shakeKey.currentState?.shake();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Text(s.failedToJoin, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isJoining = false);
+    }
+  }
+
+  void _scanQRCode(BuildContext context, AppState state, AppStrings s) async {
+    final String? code = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const QRScannerModal(),
+    );
+
+    if (code != null) {
+      _idController.text = code;
+      _joinGroup(state, s);
+    }
   }
 
   Widget _buildGroupCard(BuildContext context, AppState state, Group group,
@@ -250,9 +277,23 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                         ),
                       ),
                       IconButton(
-                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.qr_code_2_rounded,
+                            size: 16, color: Colors.white70),
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => InviteQRModal(
+                              syncId: inviteCode,
+                              groupName: group.name,
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.copy_rounded,
-                            size: 14, color: Colors.white38),
+                            size: 16, color: Colors.white70),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: inviteCode));
                           ScaffoldMessenger.of(context).showSnackBar(

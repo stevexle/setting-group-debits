@@ -194,7 +194,7 @@ class TransactionCard extends StatelessWidget {
                       const SizedBox(width: 16),
                       _buildContentSection(isEdited, isDark, state),
                       const SizedBox(width: 12),
-                      _buildAmountSection(accentColor, isDark),
+                      _buildAmountSection(accentColor, isDark, state),
                     ],
                   ),
                   if (isMeRecipient) ...[
@@ -380,16 +380,29 @@ class TransactionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAmountSection(Color accentColor, bool isDark) {
+  Widget _buildAmountSection(Color accentColor, bool isDark, AppState state) {
+    bool isOutgoing = tx.payerId == state.me?.id;
+    bool isIncoming = false;
+
+    // Handle Settlement inflows
+    if (tx.isPayment && tx.participants.contains(state.me?.id)) {
+      isIncoming = true;
+      isOutgoing = false;
+    }
+
+    // Colors
+    final incomeColor = Colors.green;
+    final expenseColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          fmt.format(tx.amount),
+          '${isIncoming ? "+" : (isOutgoing ? "-" : "")}${fmt.format(tx.amount)}',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w900,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+            color: isIncoming ? incomeColor : expenseColor,
           ),
         ),
         const SizedBox(height: 4),

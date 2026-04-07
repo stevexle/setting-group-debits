@@ -52,6 +52,12 @@ class AppState extends ChangeNotifier {
   Map<String, double>? _cachedPA;
   Map<String, double>? _cachedSA;
   Map<Category, double>? _cachedCategorySpend;
+  List<BaseTransaction>? _cachedAllTransactions;
+  double? _cachedTotalNetWorth;
+  double? _cachedWeeklyPersonal;
+  double? _cachedMonthlyPersonal;
+  double? _cachedWeeklyGroup;
+  double? _cachedMonthlyGroup;
   final Map<String, bool> _balancedCache = {};
 
   AppState() {
@@ -65,6 +71,14 @@ class AppState extends ChangeNotifier {
     _cachedPA = null;
     _cachedSA = null;
     _cachedCategorySpend = null;
+    _cachedAllTransactions = null;
+    _cachedTotalNetWorth = null;
+    _cachedWeeklyPersonal = null;
+    _cachedMonthlyPersonal = null;
+    _cachedWeeklyGroup = null;
+    _cachedMonthlyGroup = null;
+    _cachedFilteredGroups = null;
+    _balancedCache.clear();
   }
 
   @override
@@ -86,8 +100,31 @@ class AppState extends ChangeNotifier {
       List.unmodifiable(_personalTransactions);
 
   List<BaseTransaction> get allTransactions {
-    final all = <BaseTransaction>[..._personalTransactions];
+    if (_cachedAllTransactions != null) return _cachedAllTransactions!;
+    final List<BaseTransaction> all = [];
+    final myId = me?.id;
+    
+    // Add relevant GroupTransactions
+    // (Only those where money actually moved for the current user)
+    for (final gTx in groupTransactions) {
+      final isMyOutflow = gTx.payerId == myId;
+      final isMyInflow = gTx.isPayment && gTx.participants.contains(myId);
+      
+      if (isMyOutflow || isMyInflow) {
+        all.add(gTx);
+      }
+    }
+    
+    // Add only non-linked PersonalTransactions (to avoid duplicates)
+    for (final pTx in _personalTransactions) {
+      final isLinked = pTx.id.startsWith('p_') && pTx.groupId != null;
+      if (!isLinked) {
+        all.add(pTx);
+      }
+    }
+    
     all.sort((a, b) => b.date.compareTo(a.date));
+    _cachedAllTransactions = all;
     return all;
   }
 

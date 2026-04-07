@@ -11,13 +11,40 @@ extension AppStateTransactions on AppState {
       creatorId: tx.creatorId ?? me?.id,
     );
 
-    // Auto-confirm if paying to a phantom member (no app account/userId)
+    // Auto-confirm if any party is a phantom member (no app account/userId) 
+    // and the transaction involves me.
     if (finalTx.isPayment && finalTx.participants.isNotEmpty) {
       final recipientId = finalTx.participants.first;
       final recipient = people.firstWhere((p) => p.id == recipientId,
           orElse: () => Person(name: '?'));
-      if (recipient.userId == null) {
-        finalTx = finalTx.copyWith(status: TransactionStatus.confirmed);
+      final payer = people.firstWhere((p) => p.id == finalTx.payerId,
+          orElse: () => Person(name: '?'));
+          
+      // Auto confirm if:
+      // 1. Recipient is phantom (cannot confirm)
+      // 2. Payer is phantom AND I am the recipient (I am recording what I received)
+      if (recipient.userId == null || (payer.userId == null && recipientId == me?.id)) {
+        finalTx = finalTx.copyWith(
+          status: TransactionStatus.confirmed,
+          participantBalances: (payer.userId == null && recipientId == me?.id && finalTx.sourceAccountId != null)
+              ? {...(finalTx.participantBalances ?? {}), me!.id: finalTx.sourceAccountId!}
+              : finalTx.participantBalances,
+        );
+        
+        // If I am the recipient of an auto-confirmed payment from phantom
+        if (payer.userId == null && recipientId == me?.id && finalTx.sourceAccountId != null) {
+           await addPersonalTransaction(PersonalTransaction(
+            id: "p_${finalTx.id}",
+            description: finalTx.description,
+            amount: finalTx.amount,
+            date: finalTx.date,
+            isPayment: true, // Income for me
+            sourceAccountId: finalTx.sourceAccountId,
+            category: finalTx.category,
+            groupId: group.syncId ?? group.id,
+            isShared: true,
+          ));
+        }
       }
     }
 
@@ -88,10 +115,6 @@ extension AppStateTransactions on AppState {
           }
         }
 
-        // Revert account balance shift
-        await _adjustAccountBalance(
-            tx.sourceAccountId, tx.isPayment ? -tx.amount : tx.amount);
-
         // Update plan spending
         if (!tx.isPayment) {
           await _updatePlanSpent(tx.planId, -tx.amount);
@@ -103,16 +126,12 @@ extension AppStateTransactions on AppState {
   Future<void> removePersonalTransaction(String id) async {
     final pIdx = _personalTransactions.indexWhere((t) => t.id == id);
     if (pIdx != -1) {
-      final tx = _personalTransactions[pIdx];
       _personalTransactions.removeAt(pIdx);
       if (_currentUser != null) {
         await _syncService.deletePersonalTransaction(_currentUser!.uid, id);
       }
 
-      // Revert account balance shift
-      await _adjustAccountBalance(
-          tx.sourceAccountId, tx.isPayment ? -tx.amount : tx.amount);
-
+      // Remove revert account balance shift per user request
       await _saveState();
       notifyListeners();
     }
@@ -228,11 +247,19 @@ extension AppStateTransactions on AppState {
 
     final recipient = people.firstWhere((p) => p.id == toId,
         orElse: () => Person(name: '?'));
-    final status = (recipient.userId == null)
+    final payer = people.firstWhere((p) => p.id == fromId,
+        orElse: () => Person(name: '?'));
+    
+    // Auto confirm logic: 
+    // - Recipient is phantom (cannot confirm) 
+    // - Payer is phantom AND I am the recipient (identifiable user recording received payment)
+    final status = (recipient.userId == null || (payer.userId == null && toId == me?.id))
         ? TransactionStatus.confirmed
         : TransactionStatus.pending;
 
+    final txId = DateTime.now().millisecondsSinceEpoch.toString();
     final s = GroupTransaction(
+      id: txId,
       description: 'Settlement: To ${recipient.name}',
       payerId: fromId,
       amount: amount,
@@ -240,7 +267,10 @@ extension AppStateTransactions on AppState {
       isPayment: true,
       date: DateTime.now(),
       status: status,
-      sourceAccountId: sourceAccountId,
+      sourceAccountId: (fromId == me?.id) ? sourceAccountId : null,
+      participantBalances: (status == TransactionStatus.confirmed && toId == me?.id && sourceAccountId != null)
+          ? {me!.id: sourceAccountId}
+          : null,
     );
 
     await _updateActiveGroup(
@@ -249,18 +279,35 @@ extension AppStateTransactions on AppState {
       await _syncService.pushGroupTransaction(group.syncId!, s);
     }
 
-    // Adjust account balance and add to history (Outflow immediately for payer)
-    if (sourceAccountId != null && fromId == me?.id) {
-      await addPersonalTransaction(PersonalTransaction(
-        description: 'Settlement: To ${people.firstWhere((p) => p.id == toId).name}',
-        amount: amount,
-        date: DateTime.now(),
-        isPayment: false, // Expense
-        sourceAccountId: sourceAccountId,
-        category: Category.other,
-        groupId: group.id,
-        isShared: true,
-      ));
+    // Adjust account balance and add to history
+    if (sourceAccountId != null) {
+      if (fromId == me?.id) {
+        // Outflow for me as payer
+        await addPersonalTransaction(PersonalTransaction(
+          id: "p_$txId",
+          description: 'Settlement: To ${recipient.name}',
+          amount: amount,
+          date: DateTime.now(),
+          isPayment: false, // Expense
+          sourceAccountId: sourceAccountId,
+          category: Category.other,
+          groupId: group.syncId ?? group.id,
+          isShared: true,
+        ));
+      } else if (toId == me?.id && status == TransactionStatus.confirmed) {
+        // Inflow for me as recipient from phantom
+        await addPersonalTransaction(PersonalTransaction(
+          id: "p_$txId",
+          description: 'Settlement: From ${payer.name}',
+          amount: amount,
+          date: DateTime.now(),
+          isPayment: true, // Income
+          sourceAccountId: sourceAccountId,
+          category: Category.other,
+          groupId: group.syncId ?? group.id,
+          isShared: true,
+        ));
+      }
     }
 
     notifyListeners();
@@ -275,7 +322,12 @@ extension AppStateTransactions on AppState {
     final tx = group.groupTransactions[txIdx];
     if (tx.status != TransactionStatus.pending) return;
 
-    final updatedTx = tx.copyWith(status: TransactionStatus.confirmed);
+    final updatedTx = tx.copyWith(
+      status: TransactionStatus.confirmed,
+      participantBalances: (targetAccountId != null && me?.id != null)
+          ? {...(tx.participantBalances ?? {}), me!.id: targetAccountId}
+          : tx.participantBalances,
+    );
 
     await _updateActiveGroup((g) {
       final updated = [...g.groupTransactions];
@@ -327,7 +379,26 @@ extension AppStateTransactions on AppState {
       await _syncService.pushGroupTransaction(group.syncId!, updatedTx);
     }
 
-    _notify(); // Use the optimized notify instead of redundant notifyListeners()
+    // REVERT balance if I am the payer
+    if (tx.payerId == me?.id) {
+      final pId = "p_$txId";
+      final pIdx = _personalTransactions.indexWhere((t) => t.id == pId);
+      if (pIdx != -1) {
+        final pTx = _personalTransactions[pIdx];
+        _personalTransactions.removeAt(pIdx);
+        
+        // Revert balance: outflow was -amount, so add +amount back
+        if (pTx.sourceAccountId != null) {
+          await _adjustAccountBalance(pTx.sourceAccountId, pTx.amount);
+        }
+        
+        if (_currentUser != null) {
+          await _syncService.deletePersonalTransaction(_currentUser!.uid, pId);
+        }
+      }
+    }
+
+    _notify(); 
   }
 
 
@@ -347,7 +418,32 @@ extension AppStateTransactions on AppState {
     final idx = group.groupTransactions.indexWhere((t) => t.id == txId);
     if (idx != -1) {
       final oldTx = group.groupTransactions[idx];
-      final updatedTx = oldTx.copyWith(sourceAccountId: accountId);
+      
+      final isPayer = oldTx.payerId == me?.id;
+      final isRecipient = oldTx.isPayment && oldTx.participants.contains(me?.id);
+      
+      GroupTransaction updatedTx;
+      
+      if (isPayer) {
+        updatedTx = oldTx.copyWith(sourceAccountId: accountId);
+      } else if (isRecipient) {
+        updatedTx = oldTx.copyWith(
+          participantBalances: {
+            ...(oldTx.participantBalances ?? {}),
+            me!.id: accountId
+          }
+        );
+      } else {
+        // Neither payer nor settlement recipient (e.g. participant in an expense)
+        // Usually, we don't link these to wallets as personal outflow/inflow yet, 
+        // but if we do, use participantBalances.
+        updatedTx = oldTx.copyWith(
+          participantBalances: {
+            ...(oldTx.participantBalances ?? {}),
+            me!.id: accountId
+          }
+        );
+      }
 
       await _updateActiveGroup((g) {
         final updated = [...g.groupTransactions];

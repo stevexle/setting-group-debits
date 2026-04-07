@@ -2,24 +2,29 @@ part of '../app_state.dart';
 
 extension AppStateStats on AppState {
   double get totalNetWorth {
+    if (_cachedTotalNetWorth != null) return _cachedTotalNetWorth!;
     double total = 0;
     for (var acc in _accounts) {
       total += acc.currentBalance;
     }
+    _cachedTotalNetWorth = total;
     return total;
   }
 
   double get weeklyPersonalTotal {
+    if (_cachedWeeklyPersonal != null) return _cachedWeeklyPersonal!;
     double total = 0;
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
     for (var tx in _personalTransactions) {
       if (tx.date.isAfter(weekStart) && !tx.isPayment) total += tx.amount;
     }
+    _cachedWeeklyPersonal = total;
     return total;
   }
 
   double get monthlyPersonalTotal {
+    if (_cachedMonthlyPersonal != null) return _cachedMonthlyPersonal!;
     double total = 0;
     final now = DateTime.now();
     for (var tx in _personalTransactions) {
@@ -29,23 +34,26 @@ extension AppStateStats on AppState {
         total += tx.amount;
       }
     }
+    _cachedMonthlyPersonal = total;
     return total;
   }
 
   double get weeklyGroupTotal {
+    if (_cachedWeeklyGroup != null) return _cachedWeeklyGroup!;
     double total = 0;
     final now = DateTime.now();
-    // Normalize to the very start of today then go back to Monday 00:00:00
     final weekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
     for (var tx in groupTransactions) {
       if (!tx.isPayment && !tx.date.isBefore(weekStart)) {
         total += tx.amount;
       }
     }
+    _cachedWeeklyGroup = total;
     return total;
   }
 
   double get monthlyGroupTotal {
+    if (_cachedMonthlyGroup != null) return _cachedMonthlyGroup!;
     double total = 0;
     final now = DateTime.now();
     for (var tx in groupTransactions) {
@@ -55,6 +63,7 @@ extension AppStateStats on AppState {
         total += tx.amount;
       }
     }
+    _cachedMonthlyGroup = total;
     return total;
   }
 
@@ -94,9 +103,8 @@ extension AppStateStats on AppState {
   }
 
   double getPersonNetBalance(String personId, {Group? inGroup}) {
-    final group = inGroup ?? _activeGroup;
-    if (group == null) return 0;
-    return DebtEngine.calculateBalances(group.people, group.groupTransactions)
+    if (inGroup == null) return netBalances[personId] ?? 0;
+    return DebtEngine.calculateBalances(inGroup.people, inGroup.groupTransactions)
         .netBalances[personId] ??
         0;
   }

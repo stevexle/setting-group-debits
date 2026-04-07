@@ -31,13 +31,72 @@ class _MainTabHubState extends State<MainTabHub> {
     final navState = context.watch<TabNavigationState>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
 
-    return Scaffold(
-      body: IndexedStack(
-        index: navState.currentIndex,
-        children: _screens,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 800;
+
+        return Scaffold(
+          body: Row(
+            children: [
+              if (isWide)
+                _buildNavRail(context, navState, isDark, cs, s),
+              Expanded(
+                child: IndexedStack(
+                  index: navState.currentIndex,
+                  children: _screens,
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: isWide ? null : _buildBottomNav(context, navState, isDark, cs),
+        );
+      },
+    );
+  }
+
+  Widget _buildNavRail(BuildContext context, TabNavigationState navState,
+      bool isDark, ColorScheme cs, AppStrings s) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: isDark ? Colors.white10 : Colors.black12,
+          ),
+        ),
       ),
-      bottomNavigationBar: _buildBottomNav(context, navState, isDark, cs),
+      child: NavigationRail(
+        selectedIndex: navState.currentIndex,
+        onDestinationSelected: (index) {
+          HapticFeedback.selectionClick();
+          final appState = context.read<AppState>();
+          if (index == 1 && appState.groups.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(s.pleaseCreateGroup),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: cs.error,
+              ),
+            );
+            return;
+          }
+          navState.setTab(index);
+        },
+        backgroundColor: Colors.transparent,
+        labelType: NavigationRailLabelType.all,
+        selectedLabelTextStyle: TextStyle(color: cs.primary, fontWeight: FontWeight.w900, fontSize: 11),
+        unselectedLabelTextStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontWeight: FontWeight.w600, fontSize: 11),
+        selectedIconTheme: IconThemeData(color: cs.primary),
+        unselectedIconTheme: IconThemeData(color: isDark ? Colors.white38 : Colors.black38),
+        destinations: [
+          NavigationRailDestination(icon: const Icon(Icons.group_work_rounded), label: Text(s.navGroups)),
+          NavigationRailDestination(icon: const Icon(Icons.receipt_long_rounded), label: Text(s.navBillShare)),
+          NavigationRailDestination(icon: const Icon(Icons.account_balance_wallet_rounded), label: Text(s.navWallet)),
+          NavigationRailDestination(icon: const Icon(Icons.swap_vert_rounded), label: Text(s.navLedger)),
+          NavigationRailDestination(icon: const Icon(Icons.auto_awesome_motion_rounded), label: Text(s.navPlanning)),
+        ],
+      ),
     );
   }
 

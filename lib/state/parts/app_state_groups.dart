@@ -93,7 +93,7 @@ extension AppStateGroups on AppState {
     await _saveState();
     _setupSync();
     _setupNotifications();
-    notifyListeners();
+    _notify();
   }
 
   void switchGroup(String id) {
@@ -162,21 +162,27 @@ extension AppStateGroups on AppState {
       _cachedActiveGroup = null;
     }
     await _saveState();
-    notifyListeners();
+    _notify();
   }
 
   Future<void> addPerson(String name,
       {int? colorIndex,
       String? avatarUrl,
       String? userId,
-      String? email}) async {
+      String? email,
+      String? bankId,
+      String? accountNo,
+      String? bankQrUrl}) async {
     if (name.trim().isEmpty || _activeGroupId == null) return;
     final person = Person(
         name: name,
         colorIndex: colorIndex,
         avatarUrl: avatarUrl ?? '',
         userId: userId,
-        email: email);
+        email: email,
+        bankId: bankId,
+        accountNo: accountNo,
+        bankQrUrl: bankQrUrl);
     await _updateActiveGroup((g) => g.copyWith(people: [...g.people, person]),
         syncMetadata: true);
 
@@ -188,6 +194,15 @@ extension AppStateGroups on AppState {
         updatePerson(person.id, avatarUrl: cloudUrl);
       }
     }
+
+    if (bankQrUrl != null &&
+        bankQrUrl.isNotEmpty &&
+        !bankQrUrl.startsWith('http')) {
+      final cloudUrl = await _syncService.uploadBankQr(bankQrUrl);
+      if (cloudUrl != null && cloudUrl != bankQrUrl) {
+        updatePerson(person.id, bankQrUrl: cloudUrl);
+      }
+    }
   }
 
   Future<void> updatePerson(String id,
@@ -195,8 +210,12 @@ extension AppStateGroups on AppState {
       int? colorIndex,
       String? avatarUrl,
       String? userId,
-      String? email}) async {
+      String? email,
+      String? bankId,
+      String? accountNo,
+      String? bankQrUrl}) async {
     String finalAvatar = avatarUrl ?? '';
+    String finalQr = bankQrUrl ?? '';
     final group = _activeGroup;
     if (avatarUrl != null &&
         avatarUrl.isNotEmpty &&
@@ -204,6 +223,13 @@ extension AppStateGroups on AppState {
         group?.syncId != null) {
       final cloudUrl = await _syncService.uploadAvatar(avatarUrl);
       if (cloudUrl != null) finalAvatar = cloudUrl;
+    }
+    if (bankQrUrl != null &&
+        bankQrUrl.isNotEmpty &&
+        !bankQrUrl.startsWith('http') &&
+        group?.syncId != null) {
+      final cloudUrl = await _syncService.uploadBankQr(bankQrUrl);
+      if (cloudUrl != null) finalQr = cloudUrl;
     }
 
     await _updateActiveGroup((g) {
@@ -213,9 +239,12 @@ extension AppStateGroups on AppState {
       updatedPeople[pIdx] = updatedPeople[pIdx].copyWith(
           name: name,
           colorIndex: colorIndex,
-          avatarUrl: finalAvatar,
+          avatarUrl: finalAvatar.isNotEmpty ? finalAvatar : null,
           userId: userId,
-          email: email);
+          email: email,
+          bankId: bankId,
+          accountNo: accountNo,
+          bankQrUrl: finalQr.isNotEmpty ? finalQr : null);
       return g.copyWith(people: updatedPeople);
     }, syncMetadata: true);
 
@@ -240,7 +269,7 @@ extension AppStateGroups on AppState {
       }
     }
     await _saveState();
-    notifyListeners();
+    _notify();
   }
 
   bool isPersonInvolvedInTransactions(String id) {
@@ -257,5 +286,18 @@ extension AppStateGroups on AppState {
       return g.copyWith(people: updatedPeople);
     }, syncMetadata: true);
     return true;
+  }
+
+  bool canEditPerson(Person target) {
+    // 1. Always allow editing own profile
+    final isMe = target.userId != null && target.userId == _currentUser?.uid;
+    if (isMe) return true;
+
+    // 2. Owners can edit phantom members (userId == null)
+    if (isOwner && target.userId == null) {
+      return true;
+    }
+
+    return false;
   }
 }

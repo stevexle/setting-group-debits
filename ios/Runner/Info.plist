@@ -72,6 +72,40 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to scan QR codes for group invites.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tcbmobile</string>
+		<string>tcb-mobile</string>
+		<string>tcbwm</string>
+		<string>techcombank</string>
+		<string>tcb</string>
+		<string>tcbbusiness</string>
+		<string>tcbbusinessmobile</string>
+		<string>vietcombank</string>
+		<string>mbmobile</string>
+		<string>bidvsmartbanking</string>
+		<string>vnpay</string>
+		<string>vnpaywv</string>
+		<string>momo</string>
+		<string>zalopay</string>
+		<string>vpbankneo</string>
+		<string>acbmobile</string>
+		<string>tpbankmobile</string>
+		<string>agribankebanking</string>
+		<string>shbmobile</string>
+		<string>vibmobile</string>
+		<string>hdbank</string>
+		<string>msbmobile</string>
+		<string>ocbmobile</string>
+		<string>cake</string>
+		<string>timo</string>
+		<string>vcb.vn</string>
+		<string>mbbank</string>
+		<string>bidv.smartbanking</string>
+		<string>vietqr</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

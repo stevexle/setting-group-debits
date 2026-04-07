@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
+import '../logic/vietqr_helper.dart';
 
 class UIHelpers {
   static const List<Color> avatarColors = [
@@ -60,44 +61,50 @@ class UIHelpers {
     
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
-            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-                      const SizedBox(height: 16),
-                      content,
-                    ],
-                  ),
-                ),
+      builder: (ctx) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+                border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
               ),
-              const SizedBox(height: 24),
-              Row(children: [
-                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context).cancel))),
-                const SizedBox(width: 12),
-                Expanded(child: FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: isDestructive ? cs.error : cs.primary),
-                  onPressed: () { onConfirm(); Navigator.pop(ctx); },
-                  child: Text(confirmLabel),
-                )),
-              ]),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+                          const SizedBox(height: 16),
+                          content,
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(children: [
+                    Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context).cancel))),
+                    const SizedBox(width: 12),
+                    Expanded(child: FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: isDestructive ? cs.error : cs.primary),
+                      onPressed: () { onConfirm(); Navigator.pop(ctx); },
+                      child: Text(confirmLabel),
+                    )),
+                  ]),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -211,9 +218,9 @@ class UIHelpers {
             Text(s.navWallet, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             const SizedBox(height: 16),
             if (state.accounts.isEmpty) 
-               const Padding(
-                 padding: EdgeInsets.symmetric(vertical: 20),
-                 child: Text("Chưa có ví nào để hạch toán", style: TextStyle(color: Colors.white38)),
+               Padding(
+                 padding: const EdgeInsets.symmetric(vertical: 20),
+                 child: Text(s.noWalletsForSettlement, style: const TextStyle(color: Colors.white38)),
                ),
             ...state.accounts.map((acc) => ListTile(
               contentPadding: EdgeInsets.zero,
@@ -228,6 +235,129 @@ class UIHelpers {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  static Future<BankInfo?> showBankPicker(BuildContext context) async {
+    final allBanks = VietQRHelper.getBanks();
+    final s = AppStrings.of(context);
+    
+    return showModalBottomSheet<BankInfo>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final queryController = TextEditingController();
+          
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.85,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E30) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 24),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Text(s.selectBank, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: queryController,
+                      builder: (context, value, _) {
+                        return Column(
+                          children: [
+                            TextField(
+                              controller: queryController,
+                              autofocus: true,
+                              decoration: InputDecoration(
+                                hintText: s.searchBankHint,
+                                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 14),
+                                prefixIcon: Icon(Icons.search_rounded, color: isDark ? Colors.white38 : Colors.black38),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                              ),
+                              onChanged: (_) => (context as Element).markNeedsBuild(),
+                            ),
+                            if (queryController.text.isNotEmpty)
+                              const Divider(height: 1, indent: 20, endIndent: 20),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                Expanded(
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: queryController,
+                    builder: (context, value, _) {
+                      final filtered = allBanks.where((b) {
+                        final q = value.text.toLowerCase();
+                        return b.name.toLowerCase().contains(q) || b.shortName.toLowerCase().contains(q);
+                      }).toList();
+                      
+                      return ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final bank = filtered[index];
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            leading: Container(
+                              width: 48, height: 48,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: bank.logoUrl != null 
+                                ? Image.network(bank.logoUrl!, fit: BoxFit.contain)
+                                : Center(child: Text(bank.shortName[0], style: const TextStyle(fontWeight: FontWeight.bold))),
+                            ),
+                            title: Text(bank.shortName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                            subtitle: Text(bank.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38)),
+                            onTap: () => Navigator.pop(context, bank),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
       ),
     );
   }

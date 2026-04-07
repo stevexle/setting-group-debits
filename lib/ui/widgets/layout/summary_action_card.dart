@@ -38,11 +38,13 @@ class SummaryActionCard extends StatelessWidget {
                 children: [
                   Text(
                     title.toUpperCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
-                      color: Colors.white60,
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.white60 
+                          : Colors.black54,
                     ),
                   ),
                   if (onTap != null)

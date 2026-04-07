@@ -29,9 +29,9 @@ void confirmRemoveTransaction(
                   color: isDark ? Colors.white70 : Colors.black87,
                   fontSize: 14),
               children: [
-                const TextSpan(text: 'Delete '),
+                TextSpan(text: '${s.delete} '),
                 TextSpan(
-                    text: ' ${tx.description} ',
+                    text: tx.description,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 const TextSpan(text: '?')
               ]),
@@ -93,161 +93,144 @@ class TransactionCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: RepaintBoundary(
-        child: Container(
-          decoration: BoxDecoration(
+      child: GlassContainer(
+        borderRadius: 24,
+        border: isMeRecipient 
+            ? Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5), width: 1.5)
+            : null,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(24),
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-            border: Border.all(
-              color: isMeRecipient
-                  ? Colors.orangeAccent.withValues(alpha: 0.5)
-                  : (isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.black.withValues(alpha: 0.05)),
-              width: isMeRecipient ? 1.5 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(24),
-              onTap: () {
-                final isCreator = state.me?.id == tx.creatorId;
-                
-                // Rules for locking:
-                // 1. Settlement confirmed by recipient
-                final isSettlementConfirmed = tx.isPayment && tx.status == TransactionStatus.confirmed;
-                
-                // 2. Expense before the last confirmed payment (period closing)
-                bool isBeforeLatestSettlement = false;
-                if (!tx.isPayment) {
-                  final settlements = state.groupTransactions
-                    .where((t) => t.isPayment && t.status == TransactionStatus.confirmed)
-                    .toList();
-                  if (settlements.isNotEmpty) {
-                    final latest = settlements.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
-                    if (tx.date.isBefore(latest.date)) {
-                      isBeforeLatestSettlement = true;
-                    }
+            onTap: () {
+              final isCreator = state.me?.id == tx.creatorId;
+              
+              // Rules for locking:
+              // 1. Settlement confirmed by recipient
+              final isSettlementConfirmed = tx.isPayment && tx.status == TransactionStatus.confirmed;
+              
+              // 2. Expense before the last confirmed payment (period closing)
+              bool isBeforeLatestSettlement = false;
+              if (!tx.isPayment) {
+                final settlements = state.groupTransactions
+                  .where((t) => t.isPayment && t.status == TransactionStatus.confirmed)
+                  .toList();
+                if (settlements.isNotEmpty) {
+                  final latest = settlements.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+                  if (tx.date.isBefore(latest.date)) {
+                    isBeforeLatestSettlement = true;
                   }
                 }
+              }
 
-                final isLocked = !isCreator || isSettlementConfirmed || isBeforeLatestSettlement;
-                
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  builder: (ctx) => AppOptionsSheet(
-                    title: s.options,
-                    message: !isCreator 
-                        ? s.editPermissionDenied 
-                        : (isLocked 
-                            ? (isBeforeLatestSettlement ? s.cannotEditSettled : s.cannotEditConfirmed)
-                            : null),
-                    options: [
-                      AppOption(
-                        label: s.viewDetails,
-                        icon: Icons.info_outline_rounded,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (ctx) => TransactionDetailModal(tx: tx),
-                          );
-                        },
-                      ),
-                      AppOption(
-                        label: s.edit,
-                        icon: Icons.edit_rounded,
-                        enabled: isCreator && !isLocked,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (ctx) => AddTransactionModal(initialTransaction: tx),
-                          );
-                        },
-                      ),
-                      AppOption(
-                        label: s.delete,
-                        icon: Icons.delete_outline_rounded,
-                        enabled: isCreator && !isLocked,
-                        color: Colors.red,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          UIHelpers.showLiquidDialog(
-                            context: context,
-                            title: s.deleteExpense,
-                            content: Text(s.deleteExpenseMsg),
-                            confirmLabel: s.delete,
-                            isDestructive: true,
-                            onConfirm: () => state.removeGroupTransaction(tx.id),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        _buildAvatarSection(accentColor),
-                        const SizedBox(width: 16),
-                        _buildContentSection(isEdited, isDark, state),
-                        const SizedBox(width: 12),
-                        _buildAmountSection(accentColor, isDark),
-                      ],
+              final isLocked = !isCreator || isSettlementConfirmed || isBeforeLatestSettlement;
+              
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (ctx) => AppOptionsSheet(
+                  title: s.options,
+                  message: !isCreator 
+                      ? s.editPermissionDenied 
+                      : (isLocked 
+                          ? (isBeforeLatestSettlement ? s.cannotEditSettled : s.cannotEditConfirmed)
+                          : null),
+                  options: [
+                    AppOption(
+                      label: s.viewDetails,
+                      icon: Icons.info_outline_rounded,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (ctx) => TransactionDetailModal(tx: tx),
+                        );
+                      },
                     ),
-                    if (isMeRecipient) ...[
-                      const SizedBox(height: 12),
-                      const Divider(height: 1, thickness: 1, color: Colors.white12),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => state.rejectSettlement(tx.id),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.redAccent,
-                                side: const BorderSide(color: Colors.redAccent),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text(s.reject, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () => _confirmWithAccount(context, state),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text(s.confirmBalance, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    AppOption(
+                      label: s.edit,
+                      icon: Icons.edit_rounded,
+                      enabled: isCreator && !isLocked,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (ctx) => AddTransactionModal(initialTransaction: tx),
+                        );
+                      },
+                    ),
+                    AppOption(
+                      label: s.delete,
+                      icon: Icons.delete_outline_rounded,
+                      enabled: isCreator && !isLocked,
+                      color: Colors.red,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        UIHelpers.showLiquidDialog(
+                          context: context,
+                          title: s.deleteExpense,
+                          content: Text(s.deleteExpenseMsg),
+                          confirmLabel: s.delete,
+                          isDestructive: true,
+                          onConfirm: () => state.removeGroupTransaction(tx.id),
+                        );
+                      },
+                    ),
                   ],
                 ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      _buildAvatarSection(accentColor),
+                      const SizedBox(width: 16),
+                      _buildContentSection(isEdited, isDark, state),
+                      const SizedBox(width: 12),
+                      _buildAmountSection(accentColor, isDark),
+                    ],
+                  ),
+                  if (isMeRecipient) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, thickness: 1, color: Colors.white12),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => state.rejectSettlement(tx.id),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              side: const BorderSide(color: Colors.redAccent),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(s.reject, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () => _confirmWithAccount(context, state),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(s.confirmBalance, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -415,7 +398,7 @@ class TransactionCard extends StatelessWidget {
           style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white30 : Colors.black26),
+              color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black45),
         ),
       ],
     );
@@ -440,9 +423,9 @@ class _ParticipantIcons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final creator = people.firstWhere((p) => p.id == (creatorId ?? payerId),
-        orElse: () => Person(name: 'Unknown'));
+        orElse: () => Person(name: s.unknownMember));
     final payer = people.firstWhere((p) => p.id == payerId,
-        orElse: () => Person(name: 'Unknown'));
+        orElse: () => Person(name: s.unknownMember));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -451,12 +434,12 @@ class _ParticipantIcons extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 2),
-          child: Text('Entry: ${creator.name}',
+          child: Text('${s.entryBy}: ${creator.name}',
               style: TextStyle(
                   fontSize: 7.5,
                   fontStyle: FontStyle.italic,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white30 : Colors.black38)),
+                  color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black54)),
         ),
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -581,7 +564,7 @@ class DateGroup extends StatelessWidget {
             style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white30 : Colors.black26,
+              color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black45,
               letterSpacing: 1.0,
             ),
           ),

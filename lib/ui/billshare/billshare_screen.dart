@@ -55,7 +55,6 @@ class _BillShareScreenState extends State<BillShareScreen> {
               onTap: () => _openAddTransaction(context)),
       appBarActions: [],
       children: [
-        const SizedBox(height: 10),
         BillShareStatsCard(
           memberCount: state.people.length,
           weekly: state.weeklyGroupTotal,
@@ -63,19 +62,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
           s: s,
           fmt: fmt,
         ),
-        const SizedBox(height: 24),
-        Center(
-          child: Text(
-            'BillShare',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              letterSpacing: -1.0,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         _buildMembersSection(context, state, s, isDark, cs),
         const SizedBox(height: 16),
         if (state.settlements.isNotEmpty || state.hasPendingConfirmations) ...[

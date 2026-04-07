@@ -23,7 +23,7 @@ class BillShareStatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
-    final subColor = isDark ? Colors.white38 : Colors.black45;
+    final subColor = isDark ? Colors.white70 : const Color(0xFF4B5563);
 
     return GlassContainer(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),

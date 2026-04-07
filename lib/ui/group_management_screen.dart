@@ -156,6 +156,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
     );
 
     if (code != null) {
+      // Small delay to let bottom sheet animation finish smoothly
+      await Future.delayed(const Duration(milliseconds: 350));
       _idController.text = code;
       _joinGroup(state, s);
     }

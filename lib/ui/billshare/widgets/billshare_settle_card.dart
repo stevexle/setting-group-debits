@@ -63,7 +63,7 @@ class SettleUpCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                    color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black54,
                   ),
                 ),
               ],

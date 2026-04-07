@@ -254,7 +254,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        "Chỉ ghi nhận nợ cho nhóm, không trừ vào ví cá nhân của bạn.",
+                                        s.debtOnlyWarning,
                                         style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : Colors.black54),
                                       ),
                                     ),

@@ -153,9 +153,9 @@ class _SimpleTransactionModalState extends State<SimpleTransactionModal> {
                             const SizedBox(height: 16),
                             _buildCategoryPicker(s, isDark, cs),
                             const SizedBox(height: 16),
-                            _buildAccountPicker(state, isDark, cs),
+                            _buildAccountPicker(state, s, isDark, cs),
                             const SizedBox(height: 16),
-                            _buildPlanPicker(state, isDark, cs),
+                            _buildPlanPicker(state, s, isDark, cs),
                             const SizedBox(height: 24),
                             _buildConfirmButton(cs, s, state),
                             const SizedBox(height: 8),
@@ -386,12 +386,12 @@ class _SimpleTransactionModalState extends State<SimpleTransactionModal> {
     );
   }
 
-  Widget _buildAccountPicker(AppState state, bool isDark, ColorScheme cs) {
+  Widget _buildAccountPicker(AppState state, AppStrings s, bool isDark, ColorScheme cs) {
     if (state.accounts.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _headerLabel('NGUỒN TIỀN (VÍ)', Icons.account_balance_wallet_rounded, cs, isDark),
+        _headerLabel(s.walletSource, Icons.account_balance_wallet_rounded, cs, isDark),
         const SizedBox(height: 8),
         SizedBox(
           height: 38,
@@ -425,12 +425,12 @@ class _SimpleTransactionModalState extends State<SimpleTransactionModal> {
     );
   }
 
-  Widget _buildPlanPicker(AppState state, bool isDark, ColorScheme cs) {
+  Widget _buildPlanPicker(AppState state, AppStrings s, bool isDark, ColorScheme cs) {
     if (state.plans.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _headerLabel('GẮN VÀO KẾ HOẠCH', Icons.auto_awesome_motion_rounded, cs, isDark),
+        _headerLabel(s.attachToPlan, Icons.auto_awesome_motion_rounded, cs, isDark),
         const SizedBox(height: 8),
         SizedBox(
           height: 38,

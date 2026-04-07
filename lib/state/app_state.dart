@@ -30,11 +30,13 @@ class AppState extends ChangeNotifier {
   String? _fcmToken;
   List<Group>? _cachedFilteredGroups;
   User? _currentUser;
+  UserProfile? _userProfile;
   final List<PersonalTransaction> _personalTransactions = [];
   bool _isInitializing = false;
 
   final AuthService _authService = AuthService();
   final SyncService _syncService = SyncService();
+  UserProfile? get userProfile => _userProfile;
   StreamSubscription<DocumentSnapshot>? _syncSubscription;
   StreamSubscription<QuerySnapshot>? _groupTxSubscription;
   StreamSubscription<QuerySnapshot>? _groupPlanSubscription;
@@ -42,6 +44,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _accSubscription;
   StreamSubscription<QuerySnapshot>? _groupsSubscription;
   StreamSubscription? _authSub;
+  bool _isLoadingAuth = false;
 
   // Performance Cache
   List<Settlement>? _cachedSettlements;
@@ -92,6 +95,25 @@ class AppState extends ChangeNotifier {
 
   bool get isSynced => _activeGroup?.syncId != null;
   String? get syncCode => _activeGroup?.syncId;
+
+  // Auth Getters
+  User? get currentUser => _currentUser;
+  bool get isAuthenticated => _currentUser != null;
+  bool get isLoadingAuth => _isLoadingAuth;
+
+  Person? get me {
+    if (_currentUser == null) return null;
+    try {
+      return people.firstWhere((p) =>
+          p.userId == _currentUser!.uid ||
+          (p.email != null && p.email == _currentUser!.email));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> signInWithGoogle() => _signInWithGoogle();
+  Future<void> signOut() => _signOut();
 
   bool get isOwner {
     final group = _activeGroup;
@@ -226,7 +248,8 @@ class AppState extends ChangeNotifier {
     _cachedPA = null;
     _cachedSA = null;
     _cachedCategorySpend = null;
-    _cachedFilteredGroups = null; // Important for groups list performance
+    _cachedFilteredGroups = null;
+    _balancedCache.clear();
     notifyListeners();
   }
 

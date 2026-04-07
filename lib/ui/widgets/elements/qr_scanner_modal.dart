@@ -38,14 +38,49 @@ class _QRScannerModalState extends State<QRScannerModal> {
           children: [
             MobileScanner(
               controller: controller,
-              onDetect: (capture) {
+              onDetect: (capture) async {
                 final List<Barcode> barcodes = capture.barcodes;
                 if (barcodes.isNotEmpty && !_isDisposed) {
                   final code = barcodes.first.rawValue;
                   if (code != null) {
-                    Navigator.pop(context, code);
+                    _isDisposed = true; // Prevent double trigger
+                    await controller.stop(); // Stop camera for performance
+                    if (context.mounted) {
+                      Navigator.pop(context, code);
+                    }
                   }
                 }
+              },
+              errorBuilder: (context, error) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        s.error,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          error.errorCode.name == 'permissionDenied' 
+                            ? s.cameraPermission 
+                            : error.errorDetails?.message ?? s.error,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(s.close),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
             // Custom QR overlay

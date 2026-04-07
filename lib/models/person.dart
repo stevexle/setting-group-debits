@@ -8,6 +8,9 @@ class Person {
   final String? fcmToken;
   final String? userId; // For identifying "Me" via Google/Firebase UID
   final String? email;
+  final String? bankId; // NAPAS/VietQR Bank ID (BIN)
+  final String? accountNo;
+  final String? bankQrUrl;
 
   Person({
     String? id,
@@ -17,6 +20,9 @@ class Person {
     this.fcmToken,
     this.userId,
     this.email,
+    this.bankId,
+    this.accountNo,
+    this.bankQrUrl,
   })  : id = id ?? const Uuid().v4(),
         colorIndex = colorIndex ?? (DateTime.now().millisecondsSinceEpoch % 8);
 
@@ -28,6 +34,9 @@ class Person {
         'fcmToken': fcmToken,
         'userId': userId,
         'email': email,
+        'bankId': bankId,
+        'accountNo': accountNo,
+        'bankQrUrl': bankQrUrl,
       };
 
   factory Person.fromJson(Map<String, dynamic> json) => Person(
@@ -38,6 +47,9 @@ class Person {
         fcmToken: json['fcmToken'],
         userId: json['userId'],
         email: json['email'],
+        bankId: json['bankId'],
+        accountNo: json['accountNo'],
+        bankQrUrl: json['bankQrUrl'],
       );
 
   Person copyWith({
@@ -47,6 +59,9 @@ class Person {
     String? fcmToken,
     String? userId,
     String? email,
+    String? bankId,
+    String? accountNo,
+    String? bankQrUrl,
   }) =>
       Person(
         id: id,
@@ -56,6 +71,9 @@ class Person {
         fcmToken: fcmToken ?? this.fcmToken,
         userId: userId ?? this.userId,
         email: email ?? this.email,
+        bankId: bankId ?? this.bankId,
+        accountNo: accountNo ?? this.accountNo,
+        bankQrUrl: bankQrUrl ?? this.bankQrUrl,
       );
 
   @override

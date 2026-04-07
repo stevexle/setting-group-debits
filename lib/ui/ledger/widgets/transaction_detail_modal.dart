@@ -98,10 +98,10 @@ class TransactionDetailModal extends StatelessWidget {
                     isDark),
                 _buildCompactInfo(
                     Icons.create_rounded,
-                    "Người tạo",
+                    s.createdBy,
                     state.people
                         .firstWhere((p) => p.id == (tx as GroupTransaction).creatorId,
-                            orElse: () => Person(name: 'Hệ thống'))
+                            orElse: () => Person(name: s.system))
                         .name,
                     isDark),
               ],
@@ -140,17 +140,17 @@ class TransactionDetailModal extends StatelessWidget {
     switch (status) {
       case TransactionStatus.confirmed:
         color = Colors.green;
-        label = "Đã xác nhận";
+        label = s.statusConfirmed;
         icon = Icons.check_circle_rounded;
         break;
       case TransactionStatus.pending:
         color = Colors.orange;
-        label = "Chờ xác nhận";
+        label = s.statusPending;
         icon = Icons.hourglass_empty_rounded;
         break;
       case TransactionStatus.rejected:
         color = Colors.red;
-        label = "Đã từ chối";
+        label = s.statusRejected;
         icon = Icons.cancel_rounded;
         break;
     }

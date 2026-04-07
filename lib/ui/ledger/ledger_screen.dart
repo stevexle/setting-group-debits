@@ -270,8 +270,10 @@ class _LedgerScreenState extends State<LedgerScreen>
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             s.categoryBreakdown,
-            style: const TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54),
+            style: TextStyle(
+                fontSize: 10, 
+                fontWeight: FontWeight.w900, 
+                color: isDark ? Colors.white54 : Colors.black54),
           ),
         ),
         ...sortedEntries.map((e) {
@@ -335,9 +337,9 @@ class _LedgerScreenState extends State<LedgerScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+                style: TextStyle(
                 fontSize: 10,
-                color: Colors.white54,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54,
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
@@ -427,7 +429,7 @@ class _LedgerScreenState extends State<LedgerScreen>
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black54,
                           ),
                         ),
                       ],

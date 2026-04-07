@@ -8,7 +8,9 @@ import '../../models.dart';
 import '../../l10n/strings.dart';
 import '../ui_helpers.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/elements/vietqr_modal.dart';
 import '../../services/log_service.dart';
+import '../../logic/vietqr_helper.dart';
 
 class SettlementScreen extends StatelessWidget {
   const SettlementScreen({super.key});
@@ -399,9 +401,144 @@ class _SettlementCard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        // VietQR Pay Button
+        _ActionSmallButton(
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              isScrollControlled: true,
+              builder: (ctx) => VietQRModal(
+                recipient: to,
+                amount: amount,
+                memo: VietQRHelper.removeDiacritics(s.transferMemo
+                    .replaceAll('{group}', state.activeGroup?.name ?? 'BillShare')
+                    .replaceAll('{from}', from.name)
+                    .replaceAll('{to}', to.name)),
+              ),
+            );
+          },
+          icon: Icons.qr_code_2_rounded,
+          isDark: isDark,
+          enabled: true,
+          color: const Color(0xFF005AA9), // NAPAS Blue
+        ),
+        const SizedBox(width: 8),
         _ActionSmallButton(
           onPressed: isPayer
-              ? () {} // Payer doesn't remind themselves
+              ? () {
+                  final net = state.getPersonNetBalance(from.id);
+                  final items = state.activeGroup?.groupTransactions.where((t) => (t.participants.contains(from.id) || t.payerId == from.id) && !t.isPayment).toList() ?? [];
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E30) : Colors.white,
+                      title: Text(s.settlementTitle, style: const TextStyle(fontWeight: FontWeight.w900)),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    radius: 12,
+                                    child: const Icon(Icons.person_rounded, size: 14, color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(from.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(s.yourShare, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text(NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(net), 
+                                     style: TextStyle(color: net >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.w900, fontSize: 20)),
+                              ],
+                            ),
+                            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1)),
+                            if (items.isEmpty)
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 32), child: Center(child: Text(s.noTransactions)))
+                            else
+                              Flexible(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.45),
+                                  child: ListView.separated(
+                                    shrinkWrap: true,
+                                    itemCount: items.length,
+                                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                    itemBuilder: (context, idx) {
+                                      final t = items[idx];
+                                      final bool isPayer = t.payerId == from.id;
+                                      final bool isPart = t.participants.contains(from.id);
+                                      final double shareVal = t.customAmounts?[from.id] ?? (t.amount / t.participants.length);
+                                      
+                                      return Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: (isPayer ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                isPayer ? Icons.north_east_rounded : Icons.south_west_rounded,
+                                                size: 14,
+                                                color: isPayer ? Colors.green : Colors.red,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(t.description, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                                  Text(DateFormat('dd/MM | HH:mm').format(t.date), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                if (isPayer) Text('+${NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0).format(t.amount)}', style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+                                                if (isPart) Text('-${NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0).format(shareVal)}', style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.close, style: const TextStyle(fontWeight: FontWeight.w900))),
+                      ],
+                    ),
+                  );
+                }
               : () {
                   state.remindPerson(from.id, amount);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -418,7 +555,7 @@ class _SettlementCard extends StatelessWidget {
                 },
           icon: isPayer ? Icons.info_outline_rounded : Icons.notifications_active_rounded,
           isDark: isDark,
-          enabled: !isPayer && !isPhantomPayer, // Don't remind phantoms
+          enabled: true, // Allow payers to see breakdown, recipients to remind
         ),
       ],
     );
@@ -430,8 +567,9 @@ class _ActionSmallButton extends StatelessWidget {
   final IconData icon;
   final bool isDark;
   final bool enabled;
+  final Color? color;
   const _ActionSmallButton(
-      {required this.onPressed, required this.icon, required this.isDark, this.enabled = true});
+      {required this.onPressed, required this.icon, required this.isDark, this.enabled = true, this.color});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -439,16 +577,20 @@ class _ActionSmallButton extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.05),
+          color: color != null && enabled
+              ? color!.withValues(alpha: 0.15)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05)),
+          border: color != null && enabled 
+              ? Border.all(color: color!.withValues(alpha: 0.3))
+              : null,
         ),
         child: Opacity(
           opacity: enabled ? 1.0 : 0.3,
           child: IconButton(
             onPressed: enabled ? onPressed : null,
-            icon: Icon(icon,
-                size: 18, color: isDark ? Colors.white70 : Colors.black54),
+            icon: Icon(icon, color: color != null && enabled ? color : (isDark ? Colors.white70 : Colors.black87), size: 18),
           ),
         ),
       );
@@ -529,7 +671,9 @@ class _PendingSettlementCard extends StatelessWidget {
         orElse: () => Person(name: '?', colorIndex: 0));
     
     final isMeRecipient = tx.participants.contains(state.me?.id);
-    final statusColor = isMeRecipient ? Colors.orangeAccent : Colors.white38;
+    final statusColor = isMeRecipient 
+        ? Colors.orangeAccent 
+        : (isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black45);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -541,7 +685,7 @@ class _PendingSettlementCard extends StatelessWidget {
               children: [
                 _Avatar(person: from, isDark: isDark),
                 const SizedBox(width: 12),
-                const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white24),
+                const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white38),
                 const SizedBox(width: 12),
                 _Avatar(person: to, isDark: isDark),
                 const Spacer(),

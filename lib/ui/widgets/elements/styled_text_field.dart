@@ -7,6 +7,7 @@ class StyledTextField extends StatelessWidget {
   final bool autofocus;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
+  final Widget? prefixIcon;
 
   const StyledTextField({
     super.key,
@@ -15,6 +16,7 @@ class StyledTextField extends StatelessWidget {
     this.autofocus = true,
     this.keyboardType,
     this.inputFormatters,
+    this.prefixIcon,
   });
 
   @override
@@ -41,6 +43,7 @@ class StyledTextField extends StatelessWidget {
             borderSide: BorderSide.none),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        prefixIcon: prefixIcon,
       ),
     );
   }

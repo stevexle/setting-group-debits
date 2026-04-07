@@ -167,6 +167,26 @@ class SyncService {
     return localPath;
   }
 
+  /// Uploads a bank QR image to Firebase Storage and returns the download URL.
+  Future<String?> uploadBankQr(String localPath) async {
+    if (localPath.isEmpty || localPath.startsWith('http')) return localPath;
+    try {
+      final file = File(localPath);
+      if (!file.existsSync()) return localPath;
+
+      final fileName = "qr_${DateTime.now().millisecondsSinceEpoch}_${localPath.split('/').last}";
+      final ref = _storage.ref().child('bank_qrs').child(fileName);
+
+      final snapshot = await ref.putFile(file);
+      if (snapshot.state == TaskState.success) {
+        return await snapshot.ref.getDownloadURL();
+      }
+    } catch (e, s) {
+      log.error("Firebase: uploadBankQr error", e, s);
+    }
+    return localPath;
+  }
+
   /// Fetches a group by ID (Invite Code).
   Future<Group?> fetchGroup(String inviteCode) async {
     try {
@@ -272,6 +292,28 @@ class SyncService {
 
   Stream<QuerySnapshot> getAccountsStream(String uid) =>
       _firestore.collection('users').doc(uid).collection('accounts').snapshots();
+
+  // --- User Profile Sync ---
+
+  Future<void> pushUserProfile(UserProfile profile) async {
+    try {
+      await _firestore.collection('users').doc(profile.uid).set(profile.toJson(), SetOptions(merge: true));
+    } catch (e, s) {
+      log.error("Firebase: pushUserProfile error", e, s);
+    }
+  }
+
+  Future<UserProfile?> fetchUserProfile(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return UserProfile.fromJson(doc.data()!);
+      }
+    } catch (e, s) {
+      log.error("Firebase: fetchUserProfile error", e, s);
+    }
+    return null;
+  }
 
   /// Internal helper to handle chunked batch deletions (max 500 per batch)
   Future<void> _batchDelete(List<DocumentReference> refs) async {

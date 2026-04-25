@@ -109,12 +109,12 @@ class _LedgerScreenState extends State<LedgerScreen>
     for (var i = 0; i < cashFlow.length; i++) {
       final tx = cashFlow[i];
       runningBalances[tx.id] = currentBal;
-      
+
       bool isNegative = !tx.isPayment;
       if (tx is GroupTransaction && tx.isPayment) {
-        isNegative = tx.payerId == (state.me?.id ?? '');
+        isNegative = state.myPersonIds.contains(tx.payerId);
       }
-      
+
       currentBal += (isNegative ? tx.amount : -tx.amount);
     }
 
@@ -140,7 +140,8 @@ class _LedgerScreenState extends State<LedgerScreen>
                 ),
               ),
             ),
-            ...txs.map((tx) => _buildCashFlowItem(context, tx, fmt, isDark, runningBalances[tx.id] ?? 0)),
+            ...txs.map((tx) => _buildCashFlowItem(
+                context, tx, fmt, isDark, runningBalances[tx.id] ?? 0)),
             const SizedBox(height: 12),
           ],
         );
@@ -181,14 +182,15 @@ class _LedgerScreenState extends State<LedgerScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                      child: _buildStat(s.incomeLabel, fmt.format(income), Colors.green)),
+                      child: _buildStat(
+                          s.incomeLabel, fmt.format(income), Colors.green)),
                   Container(
                       width: 1,
                       height: 40,
                       color: Colors.white.withValues(alpha: 0.05)),
                   Expanded(
-                      child:
-                          _buildStat(s.expenseLabel, fmt.format(expense), Colors.redAccent)),
+                      child: _buildStat(s.expenseLabel, fmt.format(expense),
+                          Colors.redAccent)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -203,7 +205,9 @@ class _LedgerScreenState extends State<LedgerScreen>
                     '${s.netBalanceLabel}${fmt.format(income - expense)}',
                     style: TextStyle(
                         fontSize: 12,
-                        color: (income - expense) >= 0 ? Colors.green : Colors.redAccent,
+                        color: (income - expense) >= 0
+                            ? Colors.green
+                            : Colors.redAccent,
                         fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -217,7 +221,8 @@ class _LedgerScreenState extends State<LedgerScreen>
     );
   }
 
-  Widget _buildChartOverview(BuildContext context, AppState state, bool isDark) {
+  Widget _buildChartOverview(
+      BuildContext context, AppState state, bool isDark) {
     final categoryMap = state.categorySpend;
     if (categoryMap.isEmpty) return const SizedBox.shrink();
 
@@ -241,9 +246,12 @@ class _LedgerScreenState extends State<LedgerScreen>
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4)
+                    ],
                   ),
-                  child: Icon(UIHelpers.getCategoryIcon(e.key), size: 12, color: color),
+                  child: Icon(UIHelpers.getCategoryIcon(e.key),
+                      size: 12, color: color),
                 ),
                 badgePositionPercentageOffset: 0.98,
               );
@@ -271,8 +279,8 @@ class _LedgerScreenState extends State<LedgerScreen>
           child: Text(
             s.categoryBreakdown,
             style: TextStyle(
-                fontSize: 10, 
-                fontWeight: FontWeight.w900, 
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
                 color: isDark ? Colors.white54 : Colors.black54),
           ),
         ),
@@ -303,7 +311,8 @@ class _LedgerScreenState extends State<LedgerScreen>
                                 style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary)),
+                                    color:
+                                        Theme.of(context).colorScheme.primary)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -311,7 +320,8 @@ class _LedgerScreenState extends State<LedgerScreen>
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: percent,
-                            backgroundColor: Colors.white.withValues(alpha: 0.05),
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.05),
                             color: UIHelpers.getCategoryColor(e.key),
                             minHeight: 6,
                           ),
@@ -337,9 +347,11 @@ class _LedgerScreenState extends State<LedgerScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-                style: TextStyle(
+            style: TextStyle(
                 fontSize: 10,
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white54
+                    : Colors.black54,
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
@@ -353,8 +365,8 @@ class _LedgerScreenState extends State<LedgerScreen>
     );
   }
 
-  Widget _buildCashFlowItem(
-      BuildContext context, BaseTransaction tx, NumberFormat fmt, bool isDark, double balanceAfter) {
+  Widget _buildCashFlowItem(BuildContext context, BaseTransaction tx,
+      NumberFormat fmt, bool isDark, double balanceAfter) {
     final s = AppStrings.of(context);
     final state = context.read<AppState>();
     return Padding(
@@ -375,8 +387,11 @@ class _LedgerScreenState extends State<LedgerScreen>
                 color: Colors.white, size: 24),
           ),
           confirmDismiss: (_) async {
-            bool isPendingSettlement = tx is GroupTransaction && tx.isPayment && tx.status == TransactionStatus.pending;
-            bool isLockedExpense = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+            bool isPendingSettlement = tx is GroupTransaction &&
+                tx.isPayment &&
+                tx.status == TransactionStatus.pending;
+            bool isLockedExpense =
+                tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
 
             if (isPendingSettlement || isLockedExpense) {
               _confirmDelete(context, state, tx, s);
@@ -386,14 +401,24 @@ class _LedgerScreenState extends State<LedgerScreen>
               context: context,
               builder: (ctx) => AlertDialog(
                 backgroundColor: const Color(0xFF1E1E2E),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: Text(s.deleteExpense, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-                content: Text(s.deleteExpenseMsg, style: const TextStyle(color: Colors.white70)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                title: Text(s.deleteExpense,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, color: Colors.white)),
+                content: Text(s.deleteExpenseMsg,
+                    style: const TextStyle(color: Colors.white70)),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel, style: const TextStyle(color: Colors.white38))),
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(s.cancel,
+                          style: const TextStyle(color: Colors.white38))),
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(s.delete, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    child: Text(s.delete,
+                        style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -424,13 +449,45 @@ class _LedgerScreenState extends State<LedgerScreen>
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 15)),
                         const SizedBox(height: 2),
-                        Text(
-                          UIHelpers.formatSmartDate(tx.date, s),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black54,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              UIHelpers.formatSmartDate(tx.date, s),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.6)
+                                    : Colors.black54,
+                              ),
+                            ),
+                            Builder(builder: (context) {
+                              final groupName =
+                                  state.getGroupNameForTransaction(tx);
+                              if (groupName == null) {
+                                return const SizedBox.shrink();
+                              }
+                              return Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                      color: Colors.blueAccent.withValues(alpha: 0.3),
+                                      width: 0.5),
+                                ),
+                                child: Text(
+                                  groupName.toUpperCase(),
+                                  style: const TextStyle(
+                                      fontSize: 7,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.blueAccent),
+                                ),
+                              );
+                            }),
+                          ],
                         ),
                       ],
                     ),
@@ -441,7 +498,7 @@ class _LedgerScreenState extends State<LedgerScreen>
                       Builder(builder: (context) {
                         bool isNegative = !tx.isPayment;
                         if (tx is GroupTransaction && tx.isPayment) {
-                          isNegative = tx.payerId == (state.me?.id ?? '');
+                          isNegative = state.myPersonIds.contains(tx.payerId);
                         }
 
                         return Column(
@@ -488,9 +545,11 @@ class _LedgerScreenState extends State<LedgerScreen>
     );
   }
 
-  void _showTransactionOptions(BuildContext context, AppState state, BaseTransaction tx, AppStrings s) {
+  void _showTransactionOptions(
+      BuildContext context, AppState state, BaseTransaction tx, AppStrings s) {
     final myPersonIds = state.myPersonIds;
-    bool isLockedGroup = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+    bool isLockedGroup =
+        tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
     bool isShared = false;
     bool isPayer = true;
 
@@ -514,9 +573,11 @@ class _LedgerScreenState extends State<LedgerScreen>
       backgroundColor: Colors.transparent,
       builder: (ctx) => AppOptionsSheet(
         title: s.chooseAction,
-        message: (isShared) 
-          ? "Shared transaction. To edit group splits or participants, please use the BillShare tab."
-          : (isLockedGroup ? "Settlements in progress. Clear all settlements before editing expenses." : null),
+        message: (isShared)
+            ? "Shared transaction. To edit group splits or participants, please use the BillShare tab."
+            : (isLockedGroup
+                ? "Settlements in progress. Clear all settlements before editing expenses."
+                : null),
         messageColor: isShared ? Colors.blue : Colors.amber,
         options: [
           AppOption(
@@ -538,7 +599,8 @@ class _LedgerScreenState extends State<LedgerScreen>
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (ctx) => SimpleTransactionModal(initialTransaction: tx),
+                  builder: (ctx) =>
+                      SimpleTransactionModal(initialTransaction: tx),
                 );
               } else if (tx is GroupTransaction) {
                 showModalBottomSheet(
@@ -577,27 +639,38 @@ class _LedgerScreenState extends State<LedgerScreen>
 
   void _confirmDelete(
       BuildContext context, AppState state, BaseTransaction tx, AppStrings s) {
-    bool isPendingSettlement = tx is GroupTransaction && tx.isPayment && tx.status == TransactionStatus.pending;
-    bool isLockedExpense = tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
+    bool isPendingSettlement = tx is GroupTransaction &&
+        tx.isPayment &&
+        tx.status == TransactionStatus.pending;
+    bool isLockedExpense =
+        tx is GroupTransaction && !tx.isPayment && state.hasSettlements;
 
     if (isPendingSettlement || isLockedExpense) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1E1E2E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(isPendingSettlement ? s.settlement.toUpperCase() : "LOCKED",
-              style: TextStyle(fontWeight: FontWeight.w900, color: isPendingSettlement ? Colors.orangeAccent : Colors.amber)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+              isPendingSettlement ? s.settlement.toUpperCase() : "LOCKED",
+              style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: isPendingSettlement
+                      ? Colors.orangeAccent
+                      : Colors.amber)),
           content: Text(
-            isPendingSettlement 
-              ? "This settlement transaction is still pending. Please wait for the recipient to Confirm or Reject before deleting."
-              : "Settlements are in progress for this group. Please clear or complete all settlements before deleting or editing shared expenses.",
+            isPendingSettlement
+                ? "This settlement transaction is still pending. Please wait for the recipient to Confirm or Reject before deleting."
+                : "Settlements are in progress for this group. Please clear or complete all settlements before deleting or editing shared expenses.",
             style: const TextStyle(color: Colors.white70),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(s.done.toUpperCase(), style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+              child: Text(s.done.toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.blueAccent, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -611,13 +684,15 @@ class _LedgerScreenState extends State<LedgerScreen>
         backgroundColor: const Color(0xFF1E1E2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(s.deleteExpense,
-            style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+            style: const TextStyle(
+                fontWeight: FontWeight.w900, color: Colors.white)),
         content: Text(s.deleteExpenseMsg,
             style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(s.cancel, style: const TextStyle(color: Colors.white38))),
+              child: Text(s.cancel,
+                  style: const TextStyle(color: Colors.white38))),
           TextButton(
             onPressed: () {
               if (tx is GroupTransaction) {

@@ -23,6 +23,8 @@ class AppState extends ChangeNotifier {
   final List<Account> _accounts = [];
   final List<BudgetPlan> _plans = [];
   String? _activeGroupId;
+  String? _billShareGroupId; // Last selected settlement group
+  String? _planningGroupId; // Last selected planning group
   bool _isLoading = true;
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -90,39 +92,73 @@ class AppState extends ChangeNotifier {
   // Basic Getters
   bool get isLoading => _isLoading;
   String? get activeGroupId => _activeGroupId;
+  String? get billShareGroupId => _billShareGroupId;
+  String? get planningGroupId => _planningGroupId;
+
   List<Account> get accounts => List.unmodifiable(_accounts);
   List<BudgetPlan> get plans => List.unmodifiable(_plans);
+  
   String get groupName => _activeGroup?.name ?? 'No Group';
   List<Person> get people => _activeGroup?.people ?? const [];
   List<GroupTransaction> get groupTransactions =>
       _activeGroup?.groupTransactions ?? const [];
+
+  // Module Specific Getters
+  Group? get activeSettlementGroup {
+    if (_billShareGroupId != null) {
+      final idx = _groups.indexWhere((g) => g.id == _billShareGroupId);
+      if (idx != -1 && _groups[idx].type == GroupType.settlement) return _groups[idx];
+    }
+    try {
+      return _groups.firstWhere((g) => g.type == GroupType.settlement);
+    } catch (_) {
+      return _activeGroup;
+    }
+  }
+
+  Group? get activePlanningGroup {
+    if (_planningGroupId != null) {
+      final idx = _groups.indexWhere((g) => g.id == _planningGroupId);
+      if (idx != -1 && _groups[idx].type == GroupType.planning) return _groups[idx];
+    }
+    try {
+      return _groups.firstWhere((g) => g.type == GroupType.planning);
+    } catch (_) {
+      return _activeGroup;
+    }
+  }
+
   List<PersonalTransaction> get personalTransactions =>
       List.unmodifiable(_personalTransactions);
 
   List<BaseTransaction> get allTransactions {
     if (_cachedAllTransactions != null) return _cachedAllTransactions!;
     final List<BaseTransaction> all = [];
-    final myId = me?.id;
-    
-    // Add relevant GroupTransactions
-    // (Only those where money actually moved for the current user)
-    for (final gTx in groupTransactions) {
-      final isMyOutflow = gTx.payerId == myId;
-      final isMyInflow = gTx.isPayment && gTx.participants.contains(myId);
-      
-      if (isMyOutflow || isMyInflow) {
-        all.add(gTx);
+    final myPersonIdsList = myPersonIds;
+
+    // Add relevant GroupTransactions from ALL groups
+    for (final group in _groups) {
+      for (final gTx in group.groupTransactions) {
+        final isMyOutflow = myPersonIdsList.contains(gTx.payerId);
+        final isMyInflow = gTx.isPayment &&
+            gTx.participants.any((pId) => myPersonIdsList.contains(pId));
+
+        if (isMyOutflow || isMyInflow) {
+          // Tag with group name for UI if needed, or just add
+          all.add(gTx);
+        }
       }
     }
-    
+
     // Add only non-linked PersonalTransactions (to avoid duplicates)
     for (final pTx in _personalTransactions) {
+      // A personal transaction is linked if it has a groupId and its ID starts with p_
       final isLinked = pTx.id.startsWith('p_') && pTx.groupId != null;
       if (!isLinked) {
         all.add(pTx);
       }
     }
-    
+
     all.sort((a, b) => b.date.compareTo(a.date));
     _cachedAllTransactions = all;
     return all;
@@ -138,10 +174,12 @@ class AppState extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
   bool get isLoadingAuth => _isLoadingAuth;
 
-  Person? get me {
-    if (_currentUser == null) return null;
+  Person? get me => getMeForGroup(_activeGroup);
+
+  Person? getMeForGroup(Group? group) {
+    if (_currentUser == null || group == null) return null;
     try {
-      return people.firstWhere((p) =>
+      return group.people.firstWhere((p) =>
           p.userId == _currentUser!.uid ||
           (p.email != null && p.email == _currentUser!.email));
     } catch (_) {
@@ -229,6 +267,8 @@ class AppState extends ChangeNotifier {
 
       _activeGroupId ??= prefs.getString('activeGroupId') ??
           (_groups.isNotEmpty ? _groups.first.id : null);
+      _billShareGroupId = prefs.getString('billShareGroupId');
+      _planningGroupId = prefs.getString('planningGroupId');
 
       final personalTxsJson = prefs.getString('personal_transactions');
       if (personalTxsJson != null) {
@@ -273,6 +313,12 @@ class AppState extends ChangeNotifier {
 
       if (_activeGroupId != null) {
         await prefs.setString('activeGroupId', _activeGroupId!);
+      }
+      if (_billShareGroupId != null) {
+        await prefs.setString('billShareGroupId', _billShareGroupId!);
+      }
+      if (_planningGroupId != null) {
+        await prefs.setString('planningGroupId', _planningGroupId!);
       }
     } catch (e, s) {
       log.error("AppState: Save state error", e, s);

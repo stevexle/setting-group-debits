@@ -81,6 +81,7 @@ class _MainTabHubState extends State<MainTabHub> {
             );
             return;
           }
+          appState.restoreTypeGroup(index);
           navState.setTab(index);
         },
         backgroundColor: Colors.transparent,
@@ -130,6 +131,7 @@ class _MainTabHubState extends State<MainTabHub> {
             navState.setTab(0); // Force to Group Management
             return;
           }
+          appState.restoreTypeGroup(index);
           navState.setTab(index);
         },
         type: BottomNavigationBarType.fixed,

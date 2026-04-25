@@ -15,9 +15,9 @@ extension AppStateStats on AppState {
     if (_cachedWeeklyPersonal != null) return _cachedWeeklyPersonal!;
     double total = 0;
     final now = DateTime.now();
-    final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    for (var tx in _personalTransactions) {
-      if (tx.date.isAfter(weekStart) && !tx.isPayment) total += tx.amount;
+    final weekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    for (var tx in allTransactions) {
+      if (!tx.isPayment && !tx.date.isBefore(weekStart)) total += tx.amount;
     }
     _cachedWeeklyPersonal = total;
     return total;
@@ -27,7 +27,7 @@ extension AppStateStats on AppState {
     if (_cachedMonthlyPersonal != null) return _cachedMonthlyPersonal!;
     double total = 0;
     final now = DateTime.now();
-    for (var tx in _personalTransactions) {
+    for (var tx in allTransactions) {
       if (tx.date.month == now.month &&
           tx.date.year == now.year &&
           !tx.isPayment) {
@@ -43,9 +43,16 @@ extension AppStateStats on AppState {
     double total = 0;
     final now = DateTime.now();
     final weekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
-    for (var tx in groupTransactions) {
-      if (!tx.isPayment && !tx.date.isBefore(weekStart)) {
-        total += tx.amount;
+    
+    final myPersonIdsList = myPersonIds;
+    for (final group in _groups) {
+      for (var tx in group.groupTransactions) {
+        if (!tx.isPayment && !tx.date.isBefore(weekStart)) {
+          // If I'm the payer, it's my group spending
+          if (myPersonIdsList.contains(tx.payerId)) {
+            total += tx.amount;
+          }
+        }
       }
     }
     _cachedWeeklyGroup = total;
@@ -56,11 +63,17 @@ extension AppStateStats on AppState {
     if (_cachedMonthlyGroup != null) return _cachedMonthlyGroup!;
     double total = 0;
     final now = DateTime.now();
-    for (var tx in groupTransactions) {
-      if (tx.date.month == now.month &&
-          tx.date.year == now.year &&
-          !tx.isPayment) {
-        total += tx.amount;
+    
+    final myPersonIdsList = myPersonIds;
+    for (final group in _groups) {
+      for (var tx in group.groupTransactions) {
+        if (tx.date.month == now.month &&
+            tx.date.year == now.year &&
+            !tx.isPayment) {
+          if (myPersonIdsList.contains(tx.payerId)) {
+            total += tx.amount;
+          }
+        }
       }
     }
     _cachedMonthlyGroup = total;
@@ -102,10 +115,85 @@ extension AppStateStats on AppState {
     _cachedSA = results.shareAmounts;
   }
 
+  List<Settlement> getSettlementsForGroup(Group? group) {
+    if (group == null ||
+        group.people.isEmpty ||
+        group.groupTransactions.isEmpty) {
+      return [];
+    }
+    return DebtEngine.settleDebts(group.people, group.groupTransactions);
+  }
+
+  Map<String, double> getNetBalancesForGroup(Group? group) {
+    if (group == null) {
+      return {};
+    }
+    return DebtEngine.calculateBalances(group.people, group.groupTransactions)
+        .netBalances;
+  }
+
+  Map<String, double> getPaidBalancesForGroup(Group? group) {
+    if (group == null) return {};
+    return DebtEngine.calculateBalances(group.people, group.groupTransactions)
+        .paidAmounts;
+  }
+
+  Map<String, double> getShareBalancesForGroup(Group? group) {
+    if (group == null) return {};
+    return DebtEngine.calculateBalances(group.people, group.groupTransactions)
+        .shareAmounts;
+  }
+
+  double getWeeklyGroupTotalForGroup(Group? group) {
+    if (group == null) return 0;
+    double total = 0;
+    final now = DateTime.now();
+    final weekStart = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
+
+    final myPersonIdsList = myPersonIds;
+    for (var tx in group.groupTransactions) {
+      if (!tx.isPayment && !tx.date.isBefore(weekStart)) {
+        if (myPersonIdsList.contains(tx.payerId)) {
+          total += tx.amount;
+        }
+      }
+    }
+    return total;
+  }
+
+  double getMonthlyGroupTotalForGroup(Group? group) {
+    if (group == null) return 0;
+    double total = 0;
+    final now = DateTime.now();
+
+    final myPersonIdsList = myPersonIds;
+    for (var tx in group.groupTransactions) {
+      if (tx.date.month == now.month &&
+          tx.date.year == now.year &&
+          !tx.isPayment) {
+        if (myPersonIdsList.contains(tx.payerId)) {
+          total += tx.amount;
+        }
+      }
+    }
+    return total;
+  }
+
+  bool hasPendingConfirmationsForGroup(Group? group) {
+    if (group == null) return false;
+    final meId = getMeForGroup(group)?.id;
+    if (meId == null) return false;
+    return group.groupTransactions.any((t) =>
+        t.isPayment &&
+        t.status == TransactionStatus.pending &&
+        t.participants.contains(meId));
+  }
+
   double getPersonNetBalance(String personId, {Group? inGroup}) {
     if (inGroup == null) return netBalances[personId] ?? 0;
     return DebtEngine.calculateBalances(inGroup.people, inGroup.groupTransactions)
-        .netBalances[personId] ??
+            .netBalances[personId] ??
         0;
   }
 

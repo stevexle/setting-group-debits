@@ -97,8 +97,15 @@ extension AppStateGroups on AppState {
   }
 
   void switchGroup(String id) {
-    if (_groups.any((g) => g.id == id)) {
+    final idx = _groups.indexWhere((g) => g.id == id);
+    if (idx != -1) {
+      final group = _groups[idx];
       _activeGroupId = id;
+      if (group.type == GroupType.settlement) {
+        _billShareGroupId = id;
+      } else {
+        _planningGroupId = id;
+      }
       _cachedActiveGroup = null;
       _saveState();
       _setupSync();
@@ -299,5 +306,39 @@ extension AppStateGroups on AppState {
     }
 
     return false;
+  }
+
+  String? getGroupNameForTransaction(BaseTransaction tx) {
+    if (tx is GroupTransaction) {
+      for (final g in _groups) {
+        if (g.groupTransactions.any((t) => t.id == tx.id)) {
+          return g.name;
+        }
+      }
+    } else if (tx is PersonalTransaction && tx.groupId != null) {
+      for (final g in _groups) {
+        if (g.id == tx.groupId || g.syncId == tx.groupId) {
+          return g.name;
+        }
+      }
+    }
+    return null;
+  }
+
+  void restoreTypeGroup(int tabIndex) {
+    String? targetId;
+    if (tabIndex == 1) {
+      // BillShare -> restore last settlement
+      targetId = _billShareGroupId;
+    } else if (tabIndex == 4) {
+      // Planning -> restore last planning
+      targetId = _planningGroupId;
+    }
+
+    if (targetId != null &&
+        targetId != _activeGroupId &&
+        _groups.any((g) => g.id == targetId)) {
+      switchGroup(targetId);
+    }
   }
 }

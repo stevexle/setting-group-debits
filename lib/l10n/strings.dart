@@ -197,6 +197,7 @@ class AppStrings {
   final String noHistoryForAccount;
   final String noAccountsMsg;
   final String addPlanTitle;
+  final String editPlanTitle;
   final String planTitleHint;
   final String budgetHint;
   final String linksHint;
@@ -268,6 +269,64 @@ class AppStrings {
   final String attachToPlan;
   final String entryBy;
   final String unknownMember;
+  final String tabOverview;
+  final String tabItinerary;
+  final String tabChecklist;
+  final String addItinerary;
+  final String addTask;
+  final String dayLabel;
+  final String timeLabel;
+  final String activityLabel;
+  final String suggestionsLabel;
+  final String statusToDo;
+  final String statusInProgress;
+  final String statusDone;
+  final String statusCancelled;
+  final String linkToWalletPrompt;
+  final String recordAsGroupExpense;
+  final String collaborationLabel;
+  final String personalPlan;
+  final String personalPlanDesc;
+  final String whoPaidForTask;
+  final String locationLabel;
+  final String editItem;
+  final String deleteItem;
+  final String membersAndCollaboration;
+  final String linkGroup;
+  final String noLink;
+  final String aiPredictionHeader;
+  final String noReferences;
+  final String noExpensesYet;
+  final String linkGroupToManageMembers;
+  final String linkNow;
+  final String selectDay;
+  final String optional;
+  final String selectMember;
+  final String noAssignee;
+  final String confirmDeletePlanMsg;
+  final String googleMapsHint;
+  final String notesHint;
+  final String dueDateHint;
+  final String viewMap;
+  final String noItineraryMsg;
+  final String noTasksMsg;
+  final String noItineraryYet;
+  final String contactHint;
+  final String nextActivityLabel;
+  final String weatherLabel;
+  final String humidityLabel;
+  final String windLabel;
+  final String currencyLabel;
+  final String startsTodayLabel;
+  final String ongoingLabel;
+  final String addSpendLabel;
+  final String Function(int days) daysRemainingLabel;
+  final String domesticLabel;
+  final String currencySubLabel;
+  final String startsInLabel;
+  final String totalPlanned;
+  final String dailyEstimatedCost;
+  final String Function(int count) aiPredictionMessage;
 
   const AppStrings._({
     required this.appTitle,
@@ -465,6 +524,7 @@ class AppStrings {
     required this.noHistoryForAccount,
     required this.noAccountsMsg,
     required this.addPlanTitle,
+    required this.editPlanTitle,
     required this.planTitleHint,
     required this.budgetHint,
     required this.linksHint,
@@ -536,6 +596,64 @@ class AppStrings {
     required this.attachToPlan,
     required this.entryBy,
     required this.unknownMember,
+    required this.tabOverview,
+    required this.tabItinerary,
+    required this.tabChecklist,
+    required this.addItinerary,
+    required this.addTask,
+    required this.dayLabel,
+    required this.timeLabel,
+    required this.activityLabel,
+    required this.suggestionsLabel,
+    required this.statusToDo,
+    required this.statusInProgress,
+    required this.statusDone,
+    required this.statusCancelled,
+    required this.linkToWalletPrompt,
+    required this.recordAsGroupExpense,
+    required this.collaborationLabel,
+    required this.personalPlan,
+    required this.personalPlanDesc,
+    required this.whoPaidForTask,
+    required this.locationLabel,
+    required this.editItem,
+    required this.deleteItem,
+    required this.membersAndCollaboration,
+    required this.linkGroup,
+    required this.noLink,
+    required this.aiPredictionHeader,
+    required this.noReferences,
+    required this.noExpensesYet,
+    required this.linkGroupToManageMembers,
+    required this.linkNow,
+    required this.selectDay,
+    required this.optional,
+    required this.selectMember,
+    required this.noAssignee,
+    required this.confirmDeletePlanMsg,
+    required this.googleMapsHint,
+    required this.notesHint,
+    required this.dueDateHint,
+    required this.viewMap,
+    required this.noItineraryMsg,
+    required this.noTasksMsg,
+    required this.noItineraryYet,
+    required this.contactHint,
+    required this.nextActivityLabel,
+    required this.weatherLabel,
+    required this.humidityLabel,
+    required this.windLabel,
+    required this.currencyLabel,
+    required this.startsTodayLabel,
+    required this.ongoingLabel,
+    required this.addSpendLabel,
+    required this.daysRemainingLabel,
+    required this.domesticLabel,
+    required this.currencySubLabel,
+    required this.startsInLabel,
+    required this.totalPlanned,
+    required this.dailyEstimatedCost,
+    required this.aiPredictionMessage,
   });
 
   static AppStrings of(BuildContext context) {
@@ -543,7 +661,7 @@ class AppStrings {
     return locale == 'vi' ? _vi : _en;
   }
 
-  static const _vi = AppStrings._(
+  static final _vi = AppStrings._(
     appTitle: 'BillShare',
     members: 'Thành viên',
     addMember: 'Thêm',
@@ -739,6 +857,7 @@ class AppStrings {
     noHistoryForAccount: 'Chưa có biến động số dư cho tài khoản này.',
     noAccountsMsg: 'Chưa có tài khoản nào. Hãy thêm ngân hàng hoặc ví tiền mặt!',
     addPlanTitle: 'Lập Kế Hoạch Mới',
+    editPlanTitle: 'Chỉnh sửa kế hoạch',
     planTitleHint: 'Tên kế hoạch (vD: Du lịch Đà Lạt, Mua ô tô)',
     budgetHint: 'Tổng dự trù ngân sách (₫)',
     linksHint: 'Link TikTok/Facebook (Cách nhau bằng dấu phẩy)',
@@ -798,6 +917,26 @@ class AppStrings {
     selectAccountIn: 'Chọn tài khoản nhận tiền',
     confirmWithoutAccount: 'Xác nhận (không vào ví)',
     debtOnlyWarning: 'Chỉ ghi nhận nợ cho nhóm, không trừ vào ví cá nhân của bạn.',
+    unknownMember: 'Thành viên ẩn danh',
+    tabOverview: 'Tổng quan',
+    tabItinerary: 'Lịch trình',
+    tabChecklist: 'Checklist',
+    addItinerary: 'Thêm lịch trình',
+    addTask: 'Thêm nhiệm vụ',
+    dayLabel: 'Ngày',
+    timeLabel: 'Thời gian',
+    activityLabel: 'Hoạt động',
+    suggestionsLabel: 'Gợi ý',
+    statusToDo: 'Chờ làm',
+    statusInProgress: 'Đang làm',
+    statusDone: 'Đã xong',
+    statusCancelled: 'Đã hủy',
+    linkToWalletPrompt: 'Bạn muốn hạch toán khoản này vào ví không?',
+    recordAsGroupExpense: 'Quyết toán vào chi tiêu nhóm?',
+    collaborationLabel: 'CỘNG TÁC',
+    personalPlan: 'Kế hoạch cá nhân',
+    personalPlanDesc: 'Kế hoạch này chưa được chia sẻ với nhóm nào.',
+    whoPaidForTask: 'Ai đã chi khoản này?',
     statusConfirmed: 'Đã xác nhận',
     statusPending: 'Chờ xác nhận',
     statusRejected: 'Đã từ chối',
@@ -809,10 +948,48 @@ class AppStrings {
     walletSource: 'NGUỒN TIỀN (VÍ)',
     attachToPlan: 'GẮN VÀO KẾ HOẠCH',
     entryBy: 'Người tạo',
-    unknownMember: 'Không xác định',
+    locationLabel: 'Địa điểm',
+    editItem: 'Chỉnh sửa',
+    deleteItem: 'Xóa mục',
+    membersAndCollaboration: 'THÀNH VIÊN VÀ CỘNG TÁC',
+    linkGroup: 'LIÊN KẾT NHÓM',
+    noLink: 'Không\nliên kết',
+    aiPredictionHeader: 'DỰ ĐOÁN HÀNH TRÌNH',
+    noReferences: 'Chưa có link tham khảo',
+    noExpensesYet: 'Chưa có chi tiêu thực tế',
+    linkGroupToManageMembers: 'Liên kết nhóm để quản lý thành viên',
+    linkNow: 'LIÊN KẾT NGAY',
+    selectDay: 'Chọn ngày',
+    optional: 'Tuỳ chọn',
+    selectMember: 'Chọn thành viên...',
+    noAssignee: 'Không giao cho ai',
+    confirmDeletePlanMsg: 'Bạn có chắc muốn xóa kế hoạch này không?',
+    googleMapsHint: 'Link Google Map (Tuỳ chọn)',
+    notesHint: 'Ghi chú (Tuỳ chọn)',
+    dueDateHint: 'Ngày hết hạn (Tuỳ chọn)',
+    viewMap: 'XEM BẢN ĐỒ',
+    noItineraryMsg: 'Chưa có lịch trình cho chuyến đi này.',
+    noTasksMsg: 'Chưa có nhiệm vụ nào cần làm.',
+    noItineraryYet: 'Chưa có lịch trình nào',
+    contactHint: 'Liên hệ (Số điện thoại/Người liên hệ)',
+    nextActivityLabel: 'HOẠT ĐỘNG TIẾP THEO',
+    weatherLabel: 'THỜI TIẾT',
+    humidityLabel: 'Độ ẩm',
+    windLabel: 'Gió',
+    currencyLabel: 'TỶ GIÁ',
+    startsTodayLabel: 'BẮT ĐẦU HÔM NAY',
+    ongoingLabel: 'ĐANG DIỄN RA',
+    addSpendLabel: 'CHI TIÊU',
+    daysRemainingLabel: (days) => 'CÒN $days NGÀY NỮA',
+    domesticLabel: 'Nội địa',
+    currencySubLabel: 'So với Việt Nam Đồng',
+    startsInLabel: 'ĐẾM NGƯỢC CHUYẾN ĐI',
+    totalPlanned: 'TỔNG DỰ TÍNH',
+    dailyEstimatedCost: 'DỰ TÍNH TRONG NGÀY',
+    aiPredictionMessage: (count) => 'Dựa trên $count hoạt động đã lên lịch, hành trình của bạn trông rất tuyệt vời!',
   );
 
-  static const _en = AppStrings._(
+  static final _en = AppStrings._(
     appTitle: 'BillShare',
     members: 'Members',
     addMember: 'Add',
@@ -1008,6 +1185,7 @@ class AppStrings {
     noHistoryForAccount: 'No transaction history for this account.',
     noAccountsMsg: 'No accounts yet. Add your bank or cash wallet!',
     addPlanTitle: 'Create New Plan',
+    editPlanTitle: 'Edit Plan',
     planTitleHint: 'Plan title (e.g. Vacation, Car)',
     budgetHint: 'Total budget (₫)',
     linksHint: 'Reference links (comma separated)',
@@ -1079,6 +1257,64 @@ class AppStrings {
     attachToPlan: 'ATTACH TO PLAN',
     entryBy: 'Entry by',
     unknownMember: 'Unknown',
+    tabOverview: 'Overview',
+    tabItinerary: 'Itinerary',
+    tabChecklist: 'Checklist',
+    addItinerary: 'Add Itinerary',
+    addTask: 'Add Task',
+    dayLabel: 'Day',
+    timeLabel: 'Time',
+    activityLabel: 'Activity',
+    suggestionsLabel: 'Suggestions',
+    statusToDo: 'To-do',
+    statusInProgress: 'In progress',
+    statusDone: 'Done',
+    statusCancelled: 'Cancelled',
+    linkToWalletPrompt: 'Do you want to record this to your wallet?',
+    recordAsGroupExpense: 'Record as group expense?',
+    collaborationLabel: 'COLLABORATION',
+    personalPlan: 'Personal Plan',
+    personalPlanDesc: 'This plan is not shared with any group yet.',
+    whoPaidForTask: 'Who paid for this task?',
+    locationLabel: 'Location',
+    editItem: 'Edit Item',
+    deleteItem: 'Delete Item',
+    membersAndCollaboration: 'MEMBERS & COLLABORATION',
+    linkGroup: 'LINK GROUP',
+    noLink: 'No\nlink',
+    aiPredictionHeader: 'AI TRIP PREDICTION',
+    noReferences: 'No references available',
+    noExpensesYet: 'No actual expenses recorded',
+    linkGroupToManageMembers: 'Link a group to manage members',
+    linkNow: 'LINK NOW',
+    selectDay: 'Select day',
+    optional: 'Optional',
+    selectMember: 'Select member...',
+    noAssignee: 'No assignee',
+    confirmDeletePlanMsg: 'Are you sure you want to delete this plan?',
+    googleMapsHint: 'Google Maps Link (Optional)',
+    notesHint: 'Notes (Optional)',
+    dueDateHint: 'Due date (Optional)',
+    viewMap: 'VIEW MAP',
+    noItineraryMsg: 'No itinerary planned for this trip.',
+    noTasksMsg: 'No tasks to complete yet.',
+    noItineraryYet: 'No itinerary yet',
+    contactHint: 'Contact (Phone/Person)',
+    nextActivityLabel: 'NEXT ACTIVITY',
+    weatherLabel: 'WEATHER',
+    humidityLabel: 'Humidity',
+    windLabel: 'Wind',
+    currencyLabel: 'EXCHANGE RATE',
+    startsTodayLabel: 'STARTS TODAY',
+    ongoingLabel: 'ONGOING',
+    addSpendLabel: 'SPEND',
+    daysRemainingLabel: (days) => '$days DAYS LEFT',
+    domesticLabel: 'Domestic',
+    currencySubLabel: 'Compared to VND',
+    startsInLabel: 'TRIP COUNTDOWN',
+    totalPlanned: 'TOTAL PLANNED',
+    dailyEstimatedCost: 'DAILY BUDGET',
+    aiPredictionMessage: (count) => 'Based on $count scheduled activities, your itinerary looks great!',
   );
 
   String getCategoryName(Category cat) {

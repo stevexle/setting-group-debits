@@ -5,6 +5,7 @@ import '../models.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import '../logic/vietqr_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UIHelpers {
   static const List<Color> avatarColors = [
@@ -31,6 +32,10 @@ class UIHelpers {
       case Category.entertainment: return Icons.movie_filter_rounded;
       case Category.home: return Icons.home_rounded;
       case Category.health: return Icons.favorite_rounded;
+      case Category.travel: return Icons.flight_takeoff_rounded;
+      case Category.grocery: return Icons.shopping_cart_rounded;
+      case Category.bills: return Icons.receipt_long_rounded;
+      case Category.education: return Icons.school_rounded;
       default: return Icons.category_rounded;
     }
   }
@@ -44,7 +49,28 @@ class UIHelpers {
       case Category.entertainment: return const Color(0xFF9575CD);
       case Category.home: return const Color(0xFFAED581);
       case Category.health: return const Color(0xFFE57373);
+      case Category.travel: return const Color(0xFF4FC3F7);
+      case Category.grocery: return const Color(0xFFFFD54F);
+      case Category.bills: return const Color(0xFF90A4AE);
+      case Category.education: return const Color(0xFF81C784);
       default: return const Color(0xFF90A4AE);
+    }
+  }
+
+  static String getCategoryName(Category category, AppStrings s) {
+    switch (category) {
+      case Category.food: return s.categoryFood;
+      case Category.drink: return s.categoryDrink;
+      case Category.shopping: return s.categoryShopping;
+      case Category.transport: return s.categoryTransport;
+      case Category.entertainment: return s.categoryEntertainment;
+      case Category.home: return s.categoryHome;
+      case Category.health: return s.categoryHealth;
+      case Category.travel: return s.categoryTravel;
+      case Category.grocery: return s.categoryGrocery;
+      case Category.bills: return s.categoryBills;
+      case Category.education: return s.categoryEducation;
+      default: return s.categoryOther;
     }
   }
 
@@ -360,6 +386,43 @@ class UIHelpers {
         }
       ),
     );
+  }
+
+  static Color getPriorityColor(PlanPriority p) {
+    switch (p) {
+      case PlanPriority.high: return Colors.redAccent;
+      case PlanPriority.medium: return Colors.orangeAccent;
+      case PlanPriority.low: return Colors.blueAccent;
+    }
+  }
+
+  static Future<void> openUrl(String? url) async {
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Could not launch $url: $e');
+    }
+  }
+
+  static Future<void> makeCall(String contact) async {
+    final cleanContact = contact.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanContact.isNotEmpty) {
+      final uri = Uri.parse('tel:$cleanContact');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    }
+  }
+
+  static int getDaysDifference(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(date.year, date.month, date.day);
+    return target.difference(today).inDays;
   }
 }
 

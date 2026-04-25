@@ -43,53 +43,164 @@ extension AppStateFinance on AppState {
   }
 
   Future<void> addPlan(BudgetPlan plan) async {
-    final group = _activeGroup;
-    if (group != null) {
-      await _updateActiveGroup((g) => g.copyWith(plans: [...g.plans, plan]));
-      if (group.syncId != null) {
-        await _syncService.pushGroupPlan(group.syncId!, plan);
+    if (plan.linkedGroupId != null) {
+      final idx = _groups.indexWhere((g) => g.id == plan.linkedGroupId);
+      if (idx != -1) {
+        final group = _groups[idx];
+        _groups[idx] = group.copyWith(plans: [...group.plans, plan]);
+        if (group.syncId != null) {
+          await _syncService.pushGroupPlan(group.syncId!, plan);
+        }
       }
-      _notify();
+    } else {
+      _plans.add(plan);
     }
+    await _saveState();
+    _notify();
   }
 
   Future<void> updatePlan(BudgetPlan plan) async {
-    final group = _activeGroup;
-    if (group != null) {
-      await _updateActiveGroup((g) {
-        final idx = g.plans.indexWhere((p) => p.id == plan.id);
-        if (idx == -1) return g;
-        final updated = [...g.plans];
-        updated[idx] = plan;
-        return g.copyWith(plans: updated);
-      });
-      if (group.syncId != null) {
-        await _syncService.pushGroupPlan(group.syncId!, plan);
-      }
-      _notify();
+    // 1. Find the plan's current location and remove it
+    
+    // Check root
+    final rootIdx = _plans.indexWhere((p) => p.id == plan.id);
+    if (rootIdx != -1) {
+      _plans.removeAt(rootIdx);
     }
+    
+    // Check groups
+    for (int i = 0; i < _groups.length; i++) {
+      final g = _groups[i];
+      final pIdx = g.plans.indexWhere((p) => p.id == plan.id);
+      if (pIdx != -1) {
+        final updatedPlans = [...g.plans];
+        updatedPlans.removeAt(pIdx);
+        _groups[i] = g.copyWith(plans: updatedPlans);
+        
+        // If it was synced, we might need a delete push if it's moving
+        if (g.syncId != null && plan.linkedGroupId != g.id) {
+           await _syncService.deleteGroupPlan(g.syncId!, plan.id);
+        }
+        break; 
+      }
+    }
+
+    // 2. Add it to its new location
+    if (plan.linkedGroupId != null) {
+      final newGroupIdx = _groups.indexWhere((g) => g.id == plan.linkedGroupId);
+      if (newGroupIdx != -1) {
+        final targetGroup = _groups[newGroupIdx];
+        final updatedPlans = [...targetGroup.plans, plan];
+        _groups[newGroupIdx] = targetGroup.copyWith(plans: updatedPlans);
+        if (targetGroup.syncId != null) {
+          await _syncService.pushGroupPlan(targetGroup.syncId!, plan);
+        }
+      } else {
+        // Fallback to root if group ID is invalid
+        _plans.add(plan);
+      }
+    } else {
+      _plans.add(plan);
+    }
+
+    await _saveState();
+    _notify();
   }
 
   Future<void> removePlan(String id) async {
-    final group = _activeGroup;
-    if (group != null) {
-      await _updateActiveGroup((g) {
+    // Remove from root
+    _plans.removeWhere((p) => p.id == id);
+    
+    // Remove from groups
+    for (int i = 0; i < _groups.length; i++) {
+      final g = _groups[i];
+      if (g.plans.any((p) => p.id == id)) {
         final updated = g.plans.where((p) => p.id != id).toList();
-        return g.copyWith(plans: updated);
-      });
-      if (group.syncId != null) {
-        await _syncService.deleteGroupPlan(group.syncId!, id);
+        _groups[i] = g.copyWith(plans: updated);
+        if (g.syncId != null) {
+          await _syncService.deleteGroupPlan(g.syncId!, id);
+        }
       }
-      _notify();
     }
+    await _saveState();
+    _notify();
   }
 
   Future<void> _updatePlanSpent(String? planId, double delta) async {
     if (planId == null || delta == 0) return;
-    final planIdx = plans.indexWhere((p) => p.id == planId);
+    final group = _activeGroup;
+    if (group == null) return;
+    final plansList = group.plans;
+    final planIdx = plansList.indexWhere((p) => p.id == planId);
     if (planIdx != -1) {
-      final plan = plans[planIdx];
+      final plan = plansList[planIdx];
       await updatePlan(plan.copyWith(currentSpent: plan.currentSpent + delta));
     }
+  }
+
+  // --- Itinerary Management ---
+  Future<void> addItineraryItem(String planId, PlanItineraryItem item) async {
+    final plan = _findPlanById(planId);
+    if (plan != null) {
+      final updatedItinerary = [...plan.itinerary, item];
+      await updatePlan(plan.copyWith(itinerary: updatedItinerary));
+    }
+  }
+
+  Future<void> updateItineraryItem(String planId, PlanItineraryItem item) async {
+    final plan = _findPlanById(planId);
+    if (plan != null) {
+      final updatedItinerary = plan.itinerary.map((i) => i.id == item.id ? item : i).toList();
+      await updatePlan(plan.copyWith(itinerary: updatedItinerary));
+    }
+  }
+
+  Future<void> removeItineraryItem(String planId, String itemId) async {
+    final plan = _findPlanById(planId);
+    if (plan != null) {
+      final updatedItinerary = plan.itinerary.where((i) => i.id != itemId).toList();
+      await updatePlan(plan.copyWith(itinerary: updatedItinerary));
+    }
+  }
+
+  // --- Checklist Management ---
+  Future<void> addPlanTask(String planId, PlanTask task) async {
+    final plan = _findPlanById(planId);
+    if (plan != null) {
+      final updatedChecklist = [...plan.checklist, task];
+      await updatePlan(plan.copyWith(checklist: updatedChecklist));
+    }
+  }
+
+  Future<void> updatePlanTask(String planId, PlanTask task) async {
+    final plan = _findPlanById(planId);
+    if (plan != null) {
+      final updatedChecklist = plan.checklist.map((t) => t.id == task.id ? task : t).toList();
+      await updatePlan(plan.copyWith(checklist: updatedChecklist));
+    }
+  }
+
+  Future<void> removePlanTask(String planId, String taskId) async {
+    final plan = _findPlanById(planId);
+    if (plan != null) {
+      final updatedChecklist = plan.checklist.where((t) => t.id != taskId).toList();
+      await updatePlan(plan.copyWith(checklist: updatedChecklist));
+    }
+  }
+
+  // Helper to find plan across all possible storages
+  BudgetPlan? _findPlanById(String id) {
+    // Check root
+    try {
+      return _plans.firstWhere((p) => p.id == id);
+    } catch (_) {}
+
+    // Check all groups
+    for (final g in _groups) {
+      try {
+        return g.plans.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 }

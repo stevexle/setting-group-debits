@@ -9,6 +9,7 @@ import 'ui_helpers.dart';
 import 'widgets/common_widgets.dart';
 import 'widgets/elements/qr_scanner_modal.dart';
 import 'widgets/elements/invite_qr_modal.dart';
+import 'planning/plan_detail_screen.dart';
 
 class GroupManagementScreen extends StatefulWidget {
   const GroupManagementScreen({super.key});
@@ -181,6 +182,13 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         child: InkWell(
           onTap: () {
             state.switchGroup(group.id);
+            if (group.type == GroupType.planning) {
+              final plans = state.plans.where((p) => p.linkedGroupId == group.id);
+              if (plans.isNotEmpty) {
+                 Navigator.push(context, MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plans.first)));
+                 return;
+              }
+            }
             final targetTab = group.type == GroupType.settlement ? 1 : 4;
             context.read<TabNavigationState>().setTab(targetTab);
           },

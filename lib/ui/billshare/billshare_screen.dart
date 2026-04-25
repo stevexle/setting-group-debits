@@ -14,6 +14,7 @@ import 'widgets/billshare_stats.dart';
 import 'widgets/billshare_settle_card.dart';
 import 'widgets/transaction_widgets.dart';
 import 'widgets/member_widgets.dart';
+import '../widgets/modals/member_modals.dart';
 
 class BillShareScreen extends StatefulWidget {
   const BillShareScreen({super.key});
@@ -33,7 +34,13 @@ class _BillShareScreenState extends State<BillShareScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
 
-    final filteredTxs = state.groupTransactions.where((t) {
+    final group = state.activeSettlementGroup;
+    final transactions = group?.groupTransactions ?? [];
+    final people = group?.people ?? [];
+    final settlements = state.getSettlementsForGroup(group);
+    final hasPendingConfirmations = state.hasPendingConfirmationsForGroup(group);
+
+    final filteredTxs = transactions.where((t) {
       final isActuallyPayment =
           t.isPayment || t.description.startsWith('Settle:');
       return _selectedTab == 0 ? !isActuallyPayment : isActuallyPayment;
@@ -45,30 +52,30 @@ class _BillShareScreenState extends State<BillShareScreen> {
     }
     return MainScreenScaffold(
       centerTitle: false,
-      titleWidget: _buildTitle(context, state, cs, isDark),
-      fab: state.people.isEmpty
+      titleWidget: _buildTitle(context, group?.name ?? s.none, cs, isDark),
+      fab: people.isEmpty
           ? null
           : DashboardFAB(
-              enabled: state.people.isNotEmpty,
+              enabled: people.isNotEmpty,
               label: s.addExpense,
               cs: cs,
               onTap: () => _openAddTransaction(context)),
       appBarActions: [],
       children: [
         BillShareStatsCard(
-          memberCount: state.people.length,
-          weekly: state.weeklyGroupTotal,
-          monthly: state.monthlyGroupTotal,
+          memberCount: people.length,
+          weekly: state.getWeeklyGroupTotalForGroup(group),
+          monthly: state.getMonthlyGroupTotalForGroup(group),
           s: s,
           fmt: fmt,
         ),
         const SizedBox(height: 16),
-        _buildMembersSection(context, state, s, isDark, cs),
+        _buildMembersSection(context, state, group, s, isDark, cs),
         const SizedBox(height: 16),
-        if (state.settlements.isNotEmpty || state.hasPendingConfirmations) ...[
+        if (settlements.isNotEmpty || hasPendingConfirmations) ...[
           SettleUpCard(
-            settlements: state.settlements,
-            hasPendingConfirmations: state.hasPendingConfirmations,
+            settlements: settlements,
+            hasPendingConfirmations: hasPendingConfirmations,
             s: s,
             fmt: fmt,
             onTap: () => Navigator.push(context,
@@ -77,16 +84,16 @@ class _BillShareScreenState extends State<BillShareScreen> {
           ),
           const SizedBox(height: 16),
         ],
-        _buildTabSwitcher(state, s, isDark, cs),
+        _buildTabSwitcher(state, group, s, isDark, cs),
         const SizedBox(height: 16),
         _buildTransactionList(
-            filteredTxs, groupedTx, state, s, isDark, cs, fmt),
+            filteredTxs, groupedTx, people, s, isDark, cs, fmt),
       ],
     );
   }
 
   Widget _buildTitle(
-      BuildContext context, AppState state, ColorScheme cs, bool isDark) {
+      BuildContext context, String groupName, ColorScheme cs, bool isDark) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -96,7 +103,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Flexible(
-              child: Text(state.groupName,
+              child: Text(groupName,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
@@ -109,34 +116,41 @@ class _BillShareScreenState extends State<BillShareScreen> {
     );
   }
 
-  Widget _buildMembersSection(BuildContext context, AppState state,
+  Widget _buildMembersSection(BuildContext context, AppState state, Group? group,
       AppStrings s, bool isDark, ColorScheme cs) {
+    final isOwner = state.currentUser?.uid == group?.ownerId;
     return Column(children: [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           SectionLabel(label: s.members, icon: Icons.people_alt_rounded),
-          if (state.isOwner)
+          if (isOwner)
             ActionIconButton(
                 icon: Icons.add_rounded,
-                onTap: () => showAddMember(context, s),
+                onTap: () {
+                  if (group != null) state.switchGroup(group.id);
+                  showAddMember(context, s);
+                },
                 isDark: isDark),
         ],
       ),
       const SizedBox(height: 12),
       MemberSection(
-          people: state.people,
-          netBalances: state.netBalances,
-          paidBalances: state.paidBalances,
-          shareBalances: state.shareBalances,
+          people: group?.people ?? [],
+          netBalances: state.getNetBalancesForGroup(group),
+          paidBalances: state.getPaidBalancesForGroup(group),
+          shareBalances: state.getShareBalancesForGroup(group),
           s: s,
           cs: cs),
     ]);
   }
 
   Widget _buildTabSwitcher(
-      AppState state, AppStrings s, bool isDark, ColorScheme cs) {
-    final canClearHistory = state.settlements.isEmpty && !state.hasAnyPendingTransactions;
+      AppState state, Group? group, AppStrings s, bool isDark, ColorScheme cs) {
+    final settlements = state.getSettlementsForGroup(group);
+    final hasPendingTxs = group?.groupTransactions.any((t) => t.status == TransactionStatus.pending) ?? false;
+    final canClearHistory = settlements.isEmpty && !hasPendingTxs;
+    
     return Row(
       children: [
         Expanded(
@@ -148,7 +162,10 @@ class _BillShareScreenState extends State<BillShareScreen> {
           child: ActionIconButton(
               icon: Icons.cleaning_services_rounded,
               onTap: canClearHistory
-                  ? () => _confirmClearHistory(context, s)
+                  ? () {
+                      if (group != null) state.switchGroup(group.id);
+                      _confirmClearHistory(context, s);
+                    }
                   : () {},
               isDark: isDark),
         ),
@@ -185,7 +202,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
   Widget _buildTransactionList(
       List<GroupTransaction> filteredTxs,
       Map<DateTime, List<GroupTransaction>> groupedTx,
-      AppState state,
+      List<Person> people,
       AppStrings s,
       bool isDark,
       ColorScheme cs,
@@ -203,7 +220,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
           .map((date) => DateGroup(
               date: date,
               transactions: groupedTx[date]!,
-              people: state.people,
+              people: people,
               fmt: fmt,
               s: s))
           .toList(),

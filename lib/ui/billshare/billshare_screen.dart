@@ -137,6 +137,7 @@ class _BillShareScreenState extends State<BillShareScreen> {
       const SizedBox(height: 12),
       MemberSection(
           people: group?.people ?? [],
+          ownerId: group?.ownerId,
           netBalances: state.getNetBalancesForGroup(group),
           paidBalances: state.getPaidBalancesForGroup(group),
           shareBalances: state.getShareBalancesForGroup(group),

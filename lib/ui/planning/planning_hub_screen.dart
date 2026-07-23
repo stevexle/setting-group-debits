@@ -134,7 +134,6 @@ class _PlanningHubScreenState extends State<PlanningHubScreen> with SingleTicker
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: 90,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 gradient: LinearGradient(
@@ -159,11 +158,16 @@ class _PlanningHubScreenState extends State<PlanningHubScreen> with SingleTicker
                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                            children: [
                              _buildPlanTypeTag(context, plan.type, isDark, s),
-                             const Spacer(),
-                             _buildStatusIndicator(plan, s, isDark),
+                             const SizedBox(width: 8),
+                             Expanded(
+                               child: Align(
+                                 alignment: Alignment.centerRight,
+                                 child: _buildStatusIndicator(plan, s, isDark),
+                               ),
+                             ),
                            ],
                          ),
-                         const Spacer(),
+                         const SizedBox(height: 12),
                          Row(
                            crossAxisAlignment: CrossAxisAlignment.end,
                            children: [

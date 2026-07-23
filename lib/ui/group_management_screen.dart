@@ -248,7 +248,41 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                         color: isDark ? Colors.white38 : Colors.black38,
                         fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  Builder(
+                    builder: (context) {
+                      if (group.ownerId == null) return const SizedBox();
+                      final ownerPerson = group.people.firstWhere(
+                        (p) => p.userId == group.ownerId,
+                        orElse: () => Person(name: ''),
+                      );
+                      if (ownerPerson.name.isEmpty) return const SizedBox();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.workspace_premium_rounded, size: 10, color: Colors.amber),
+                            const SizedBox(width: 3),
+                            Text(
+                              ownerPerson.name,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   _buildTypeChip(group.type, s, cs, isDark),
                 ],
               ),

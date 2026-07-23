@@ -191,135 +191,170 @@ void showPersonSummary(BuildContext context, Person person, double paid,
     {bool hideStats = false}) {
   showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final accentColor = UIHelpers.getAvatarColor(person.colorIndex);
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0E0E1A) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.5)
-                    : Colors.black.withValues(alpha: 0.1),
-                blurRadius: 40,
-                offset: const Offset(0, -10),
-              )
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 84,
-                height: 84,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: accentColor.withValues(alpha: 0.15),
-                  border: Border.all(
-                      color: accentColor.withValues(alpha: 0.1), width: 1),
-                  image: person.avatarUrl.isNotEmpty
-                      ? (person.avatarUrl.startsWith('http')
-                          ? DecorationImage(
-                              image: NetworkImage(person.avatarUrl),
-                              fit: BoxFit.cover)
-                          : (File(person.avatarUrl).existsSync()
-                              ? DecorationImage(
-                                  image: FileImage(File(person.avatarUrl)),
-                                  fit: BoxFit.cover)
-                              : null))
-                      : null,
-                ),
-                child: person.avatarUrl.isEmpty ||
-                        (!person.avatarUrl.startsWith('http') &&
-                            !File(person.avatarUrl).existsSync())
-                    ? Center(
-                        child: Text(
-                          person.name.isNotEmpty
-                              ? person.name[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: accentColor,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 20),
-              Text(person.name,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : const Color(0xFF0E0E1A),
-                    letterSpacing: -0.5,
-                  )),
-              const SizedBox(height: 12),
-              if (person.accountNo != null && person.bankId != null)
-                Text(
-                    '${VietQRHelper.getBankByBin(person.bankId)?.shortName} - ${person.accountNo}',
-                    style: TextStyle(
-                        color: isDark ? Colors.white54 : Colors.black54,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold)),
-              const SizedBox(height: 32),
-              if (!hideStats) ...[
-                _buildStatRow(s.totalPaid, paid, const Color(0xFF66BB6A), fmt, s,
-                    isDark),
-                const SizedBox(height: 16),
-                _buildStatRow(s.yourShare, share, const Color(0xFFFFA726), fmt,
-                    s, isDark),
-                const SizedBox(height: 16),
-                Divider(
-                    color: isDark ? Colors.white12 : Colors.black12, height: 1),
-                const SizedBox(height: 16),
-                _buildStatRow(
-                    s.tabBill,
-                    net,
-                    isDark ? Colors.white : const Color(0xFF0E0E1A),
-                    fmt,
-                    s,
-                    isDark,
-                    isNet: true),
+        final state = ctx.read<AppState>();
+        final isOwner = person.userId != null && person.userId == state.activeSettlementGroup?.ownerId;
+
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0E0E1A) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.5)
+                      : Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 40,
+                  offset: const Offset(0, -10),
+                )
               ],
-              if (context.read<AppState>().canEditPerson(person))
-                Padding(
-                  padding: EdgeInsets.only(top: hideStats ? 8 : 40),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        showAddMember(context, s, existingPerson: person);
-                      },
-                      icon:
-                          Icon(Icons.edit_rounded, color: accentColor, size: 20),
-                      label: Text(
-                        s.edit.toUpperCase(),
-                        style: TextStyle(
-                          color: accentColor,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
-                          letterSpacing: 1.2,
-                        ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: accentColor.withValues(alpha: 0.15),
+                      border: Border.all(
+                          color: accentColor.withValues(alpha: 0.1), width: 1),
+                      image: person.avatarUrl.isNotEmpty
+                          ? (person.avatarUrl.startsWith('http')
+                              ? DecorationImage(
+                                  image: NetworkImage(person.avatarUrl),
+                                  fit: BoxFit.cover)
+                              : (File(person.avatarUrl).existsSync()
+                                  ? DecorationImage(
+                                      image: FileImage(File(person.avatarUrl)),
+                                      fit: BoxFit.cover)
+                                  : null))
+                          : null,
+                    ),
+                    child: person.avatarUrl.isEmpty ||
+                            (!person.avatarUrl.startsWith('http') &&
+                                !File(person.avatarUrl).existsSync())
+                        ? Center(
+                            child: Text(
+                              person.name.isNotEmpty
+                                  ? person.name[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                color: accentColor,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(person.name,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : const Color(0xFF0E0E1A),
+                        letterSpacing: -0.5,
+                      )),
+                  if (isOwner) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                            color: accentColor.withValues(alpha: 0.3),
-                            width: 1.5),
-                        shape: const StadiumBorder(),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.workspace_premium_rounded, size: 14, color: Colors.amber),
+                          SizedBox(width: 4),
+                          Text(
+                            'Trưởng nhóm',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.amber,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-            ],
+                  ],
+                  if (person.accountNo != null && person.bankId != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                        '${VietQRHelper.getBankByBin(person.bankId)?.shortName} - ${person.accountNo}',
+                        style: TextStyle(
+                            color: isDark ? Colors.white54 : Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                  const SizedBox(height: 20),
+                  if (!hideStats) ...[
+                    _buildStatRow(s.totalPaid, paid, const Color(0xFF66BB6A), fmt, s,
+                        isDark),
+                    const SizedBox(height: 12),
+                    _buildStatRow(s.yourShare, share, const Color(0xFFFFA726), fmt,
+                        s, isDark),
+                    const SizedBox(height: 12),
+                    Divider(
+                        color: isDark ? Colors.white12 : Colors.black12, height: 1),
+                    const SizedBox(height: 12),
+                    _buildStatRow(
+                        s.tabBill,
+                        net,
+                        isDark ? Colors.white : const Color(0xFF0E0E1A),
+                        fmt,
+                        s,
+                        isDark,
+                        isNet: true),
+                  ],
+                  if (context.read<AppState>().canEditPerson(person))
+                    Padding(
+                      padding: EdgeInsets.only(top: hideStats ? 8 : 20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            showAddMember(context, s, existingPerson: person);
+                          },
+                          icon:
+                              Icon(Icons.edit_rounded, color: accentColor, size: 18),
+                          label: Text(
+                            s.edit.toUpperCase(),
+                            style: TextStyle(
+                              color: accentColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                                color: accentColor.withValues(alpha: 0.3),
+                                width: 1.5),
+                            shape: const StadiumBorder(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           ),
         );
       });

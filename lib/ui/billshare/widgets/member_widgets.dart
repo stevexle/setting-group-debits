@@ -15,6 +15,7 @@ class MemberCell extends StatelessWidget {
   final double paid, share, net;
   final AppStrings s;
   final ColorScheme cs;
+  final bool isOwner;
 
   const MemberCell({
     super.key,
@@ -24,6 +25,7 @@ class MemberCell extends StatelessWidget {
     required this.net,
     required this.s,
     required this.cs,
+    this.isOwner = false,
   });
 
   @override
@@ -90,53 +92,88 @@ class MemberCell extends StatelessWidget {
                       ? Colors.white.withValues(alpha: 0.08)
                       : Colors.black.withValues(alpha: 0.05))),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: person.avatarUrl.isEmpty
-                        ? LinearGradient(colors: [
-                            avatarColor,
-                            avatarColor.withValues(alpha: 0.7)
-                          ])
-                        : null,
-                    image: person.avatarUrl.isNotEmpty
-                        ? (person.avatarUrl.startsWith('http')
-                            ? DecorationImage(
-                                image: NetworkImage(person.avatarUrl),
-                                fit: BoxFit.cover)
-                            : (File(person.avatarUrl).existsSync()
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: person.avatarUrl.isEmpty
+                            ? LinearGradient(colors: [
+                                avatarColor,
+                                avatarColor.withValues(alpha: 0.7)
+                              ])
+                            : null,
+                        image: person.avatarUrl.isNotEmpty
+                            ? (person.avatarUrl.startsWith('http')
                                 ? DecorationImage(
-                                    image: FileImage(File(person.avatarUrl)),
+                                    image: NetworkImage(person.avatarUrl),
                                     fit: BoxFit.cover)
-                                : null))
-                        : null,
-                    boxShadow: [
-                      BoxShadow(
-                          color: avatarColor.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2))
-                    ]),
-                child: person.avatarUrl.isEmpty ||
-                        (!person.avatarUrl.startsWith('http') &&
-                            !File(person.avatarUrl).existsSync())
-                    ? Center(
-                        child: Text(person.name[0].toUpperCase(),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 14)))
-                    : null),
+                                : (File(person.avatarUrl).existsSync()
+                                    ? DecorationImage(
+                                        image: FileImage(File(person.avatarUrl)),
+                                        fit: BoxFit.cover)
+                                    : null))
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                              color: avatarColor.withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2))
+                        ]),
+                    child: person.avatarUrl.isEmpty ||
+                            (!person.avatarUrl.startsWith('http') &&
+                                !File(person.avatarUrl).existsSync())
+                        ? Center(
+                            child: Text(person.name[0].toUpperCase(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14)))
+                        : null),
+                if (isOwner)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade600,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.amber.withValues(alpha: 0.5),
+                            blurRadius: 4,
+                          )
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 9,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 6),
-            Text(person.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                )),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(person.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                  )),
+            ),
             const SizedBox(height: 2),
             StatusChip(net: net, cs: cs)
           ]),
@@ -172,6 +209,7 @@ class StatusChip extends StatelessWidget {
 
 class MemberSection extends StatelessWidget {
   final List<Person> people;
+  final String? ownerId;
   final Map<String, double> netBalances;
   final Map<String, double> paidBalances;
   final Map<String, double> shareBalances;
@@ -181,6 +219,7 @@ class MemberSection extends StatelessWidget {
   const MemberSection({
     super.key,
     required this.people,
+    this.ownerId,
     required this.netBalances,
     required this.paidBalances,
     required this.shareBalances,
@@ -204,9 +243,10 @@ class MemberSection extends StatelessWidget {
           final net = netBalances[p.id] ?? 0.0;
           final paid = paidBalances[p.id] ?? 0.0;
           final share = shareBalances[p.id] ?? 0.0;
+          final isOwner = (p.userId != null && p.userId == ownerId);
 
           return MemberCell(
-              person: p, paid: paid, share: share, net: net, s: s, cs: cs);
+              person: p, paid: paid, share: share, net: net, s: s, cs: cs, isOwner: isOwner);
         },
       ),
     );

@@ -1,6 +1,9 @@
+import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:setting_group_debits/services/log_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:setting_group_debits/firebase_options.dart';
+import 'package:setting_group_debits/services/log_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -46,19 +49,33 @@ class NotificationService {
 
   Future<String?> getToken() async {
     try {
+      if (Platform.isIOS) {
+        final apnsToken = await _fcm.getAPNSToken();
+        if (apnsToken == null) {
+          log.warning('Firebase: APNS token is not available on device yet');
+          return null;
+        }
+      }
       return await _fcm.getToken();
     } catch (e) {
-      log.warning('Firebase: getToken error (expected on simulator): $e');
+      log.warning('Firebase: getToken error: $e');
       return null;
     }
   }
 
   Future<void> subscribeToGroup(String syncId) async {
     try {
+      if (Platform.isIOS) {
+        final apnsToken = await _fcm.getAPNSToken();
+        if (apnsToken == null) {
+          log.warning('Firebase: Cannot subscribe, APNS token is null on iOS');
+          return;
+        }
+      }
       await _fcm.subscribeToTopic('group_$syncId');
       log.info('Firebase: Subscribed to group_$syncId');
     } catch (e) {
-      log.warning('Firebase: subscribeToTopic error (expected on simulator): $e');
+      log.warning('Firebase: subscribeToTopic error: $e');
     }
   }
 
@@ -93,6 +110,10 @@ class NotificationService {
 }
 
 // Global background handler
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   log.info('Firebase: Handling background message ${message.messageId}');
 }

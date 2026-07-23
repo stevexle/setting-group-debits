@@ -27,8 +27,10 @@ void main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
     }
-    await log.init(); // Initialize global error tracking
-    await NotificationService().init();
+    log.init(); // Initialize global error tracking
+    NotificationService().init().catchError((e, stack) {
+      log.error("Failed to initialize NotificationService", e, stack);
+    });
     log.info("App started successfully with logging enabled");
   } catch (e, stack) {
     log.error("Failed to initialize app", e, stack);
